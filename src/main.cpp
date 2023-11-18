@@ -11,7 +11,7 @@ using namespace screenshare;
 
 void mainServer(const std::string& bind) {
 	server::VideoServer videoServer(misc::tcpEndpointFromString(bind));
-	videoServer.run();
+	videoServer.run(":0", 0x1dd);
 }
 
 int mainClient(const std::string& endpoint) {

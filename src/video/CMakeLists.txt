@@ -1,0 +1,8 @@
+set(LOCAL_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/common.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/encoder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/decoder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/network.cpp
+)
+
+set(SOURCES ${SOURCES} ${LOCAL_SOURCES} PARENT_SCOPE)

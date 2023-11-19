@@ -19,6 +19,7 @@ namespace screenshare::server {
 	private:
 		using Socket = boost::asio::ip::tcp::socket;
 
+		std::atomic<bool> mRun;
 		boost::asio::io_context mIOContext;
 		boost::asio::ip::tcp::acceptor mAcceptor;
 		std::mutex mClientSocketsMutex;
@@ -30,11 +31,10 @@ namespace screenshare::server {
 			const screengrabber::GrabbedFrame& grabbedFrame
 		);
 
-		bool encodeFrameAndSend(
+		std::tuple<bool, std::vector<boost::system::error_code>> encodeFrameAndSend(
 			std::vector<Socket*>& sockets,
 			video::OutputStream* videoStream,
-			video::network::PacketSender& packetSender,
-			std::vector<boost::system::error_code>& socketErrors
+			video::network::PacketSender& packetSender
 		);
 	public:
 		explicit VideoServer(boost::asio::ip::tcp::endpoint bind);

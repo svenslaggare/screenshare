@@ -19,8 +19,10 @@ namespace screenshare::server {
 			return;
 		}
 
+		mRun.store(true);
+
 		auto acceptorThread = std::thread([&]() {
-			while (true) {
+			while (mRun.load()) {
 				boost::asio::ip::tcp::socket socket(mIOContext);
 				mAcceptor.accept(socket);
 
@@ -64,28 +66,23 @@ namespace screenshare::server {
 				}
 			}
 
-			std::vector<boost::system::error_code> socketErrors;
-			auto done = encodeFrameAndSend(clientSockets, videoStream, packetSender, socketErrors);
+			auto [done, socketErrors] = encodeFrameAndSend(clientSockets, videoStream, packetSender);
 
 			{
 				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
 				std::size_t socketIndex = 0;
-				mClientSockets.erase(
-					std::remove_if(
-						mClientSockets.begin(),
-						mClientSockets.end(),
-						[&](auto& socket) {
-							auto socketError = socketErrors[socketIndex];
-							bool failed = socketError.failed();
-							if (failed) {
-								std::cout << "Removing client #" << socketIndex << " due to: " << socketError << std::endl;
-							}
-
-							socketIndex++;
-							return failed;
+				std::erase_if(
+					mClientSockets,
+					[&](auto& socket) {
+						auto socketError = socketErrors[socketIndex];
+						bool failed = socketError.failed();
+						if (failed) {
+							std::cout << "Removing client #" << socketIndex << " due to: " << socketError << std::endl;
 						}
-					),
-					mClientSockets.end()
+
+						socketIndex++;
+						return failed;
+					}
 				);
 			}
 
@@ -99,6 +96,7 @@ namespace screenshare::server {
 
 		std::cout << "Done encoding." << std::endl;
 
+		mRun.store(false);
 		if (acceptorThread.joinable()) {
 			acceptorThread.join();
 		}
@@ -130,16 +128,15 @@ namespace screenshare::server {
 		return true;
 	}
 
-	bool VideoServer::encodeFrameAndSend(std::vector<Socket*>& sockets,
-										 video::OutputStream* videoStream,
-										 video::network::PacketSender& packetSender,
-										 std::vector<boost::system::error_code>& socketErrors) {
+	std::tuple<bool, std::vector<boost::system::error_code>> VideoServer::encodeFrameAndSend(std::vector<Socket*>& sockets,
+																							 video::OutputStream* videoStream,
+																							 video::network::PacketSender& packetSender) {
 		if (avcodec_send_frame(videoStream->encoder.get(), videoStream->frame.get()) < 0) {
 			std::cout << "avcodec_send_frame failed" << std::endl;
-			return true;
+			return { true, {} };
 		}
 
-		socketErrors.resize(sockets.size());
+		std::vector<boost::system::error_code> socketErrors(sockets.size());
 
 		bool done = false;
 		auto packet = videoStream->packet.get();
@@ -165,6 +162,6 @@ namespace screenshare::server {
 			}
 		}
 
-		return done;
+		return { done, socketErrors };
 	}
 }

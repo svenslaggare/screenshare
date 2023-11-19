@@ -170,7 +170,7 @@ namespace screenshare::server {
 			av_packet_rescale_ts(packet, videoStream->encoder->time_base, stream->time_base);
 			packet->stream_index = stream->index;
 
-			std::vector<std::tuple<ClientId, std::shared_ptr<video::network::PacketSender::AsyncResult>>> sendResults;
+			std::vector<std::tuple<ClientId, video::network::PacketSender::AsyncResultPtr>> sendResults;
 			for (auto& [clientId, socket] : sockets) {
 				sendResults.emplace_back(clientId, packetSender.sendAsync(*socket, packet));
 			}

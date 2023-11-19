@@ -38,7 +38,9 @@ namespace screenshare::video::network {
 			explicit AsyncResult(AVPacket* packet);
 		};
 
-		std::shared_ptr<AsyncResult> sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet);
+		using AsyncResultPtr = std::shared_ptr<AsyncResult>;
+
+		AsyncResultPtr sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet);
 	};
 
 	class PacketReceiver {

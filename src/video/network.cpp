@@ -87,7 +87,7 @@ namespace screenshare::video::network {
 
 	}
 
-	std::shared_ptr<PacketSender::AsyncResult> PacketSender::sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet) {
+	PacketSender::AsyncResultPtr PacketSender::sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet) {
 		auto asyncResult = std::make_shared<AsyncResult>(packet);
 
 		boost::asio::async_write(

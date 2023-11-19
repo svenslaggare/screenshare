@@ -67,7 +67,7 @@ namespace screenshare::client {
 		while (mRun.load()) {
 			if (auto error = packetReceiver.receive(socket, packet.get())) {
 				if (error == boost::asio::error::eof) {
-					addInfoLine("Connected closed by server.");
+					addInfoLine("Connection closed by server.");
 					break; // Connection closed cleanly by peer.
 				} else if (error) {
 					throw boost::system::system_error(error); // Some other error.
@@ -108,7 +108,7 @@ namespace screenshare::client {
 			fetchData();
 			addInfoLine("Stream ended.");
 		} catch (const std::exception& e) {
-			addInfoLine(fmt::format("Failed to connect due to: {}", + e.what()));
+			addInfoLine(fmt::format("Failed to connect due to: {}", e.what()));
 		}
 
 		mRun.store(false);

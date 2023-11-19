@@ -6,16 +6,8 @@ namespace screenshare::client {
 
 	}
 
-	Glib::RefPtr<Gtk::TextBuffer> InfoBuffer::gtkBuffer() const {
-		return mGtkBuffer;
-	}
-
-	void InfoBuffer::addLine(std::string newLine) {
-		if (mLines.size() > 1) {
-			mLines.pop_front();
-		}
-
-		mLines.push_back(std::move(newLine));
+	Glib::RefPtr<Gtk::TextBuffer> InfoBuffer::gtkBuffer() {
+		std::lock_guard<std::mutex> guard(mMutex);
 
 		std::stringstream stream;
 		for (auto& line : mLines) {
@@ -23,5 +15,17 @@ namespace screenshare::client {
 		}
 
 		mGtkBuffer->set_text(stream.str());
+
+		return mGtkBuffer;
+	}
+
+	void InfoBuffer::addLine(std::string newLine) {
+		std::lock_guard<std::mutex> guard(mMutex);
+
+		if (mLines.size() >= mMaxLines) {
+			mLines.pop_front();
+		}
+
+		mLines.push_back(std::move(newLine));
 	}
 }

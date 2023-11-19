@@ -41,6 +41,8 @@ namespace screenshare::client {
 		std::atomic<bool> mRun = false;
 		std::thread mReceiveThread;
 
+		void addInfoLine(std::string line);
+
 		void connectButtonClicked();
 		void disconnectButtonClicked();
 

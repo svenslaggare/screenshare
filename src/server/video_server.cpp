@@ -155,7 +155,7 @@ namespace screenshare::server {
 		auto packet = videoStream->packet.get();
 		auto stream = videoStream->stream;
 
-		std::vector<std::tuple<ClientId, std::shared_ptr<video::network::PacketSender::AsyncResult>>> sendResults;
+		std::vector<SendResult> socketErrors;
 		while (true) {
 			auto response = avcodec_receive_packet(videoStream->encoder.get(), packet);
 			if (response == AVERROR(EAGAIN) || response == AVERROR_EOF) {
@@ -170,16 +170,18 @@ namespace screenshare::server {
 			av_packet_rescale_ts(packet, videoStream->encoder->time_base, stream->time_base);
 			packet->stream_index = stream->index;
 
-//			misc::TimeMeasurement sendTM("Send time");
+			std::vector<std::tuple<ClientId, std::shared_ptr<video::network::PacketSender::AsyncResult>>> sendResults;
 			for (auto& [clientId, socket] : sockets) {
 				sendResults.emplace_back(clientId, packetSender.sendAsync(*socket, packet));
 			}
-		}
 
-		std::vector<SendResult> socketErrors;
-		for (auto [clientId, sendResult] : sendResults) {
-			sendResult->done.wait(false);
-			socketErrors.emplace_back(clientId, sendResult->error);
+			for (auto [clientId, sendResult] : sendResults) {
+				sendResult->done.wait(false);
+
+				if (sendResult->error) {
+					socketErrors.emplace_back(clientId, sendResult->error);
+				}
+			}
 		}
 
 		return { done, socketErrors };

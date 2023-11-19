@@ -56,7 +56,7 @@ namespace screenshare::client {
 			throw std::runtime_error("Failed to allocate memory for AVPacket");
 		}
 
-		std::cout << "Stream started" << std::endl;
+		std::cout << "Stream started " << codecParameterReceiver.codecParameters()->width << "x" << codecParameterReceiver.codecParameters()->height << std::endl;
 		mRun.store(true);
 
 		video::PacketDecoder packetDecoder;
@@ -120,7 +120,10 @@ namespace screenshare::client {
 	}
 
 	void VideoPlayer::connectButtonClicked() {
-		mReceiveThread.join();
+		if (mReceiveThread.joinable()) {
+			mReceiveThread.join();
+		}
+
 		mReceiveThread = std::thread([&]() {
 			runFetchData();
 		});

@@ -20,7 +20,12 @@ int mainClient(const std::string& endpoint) {
 	auto numProgramArguments = (int)programArguments.size();
 	auto programArgumentsPtr = programArguments.data();
 
-	auto app = Gtk::Application::create(numProgramArguments, programArgumentsPtr, "com.screenshare");
+	auto app = Gtk::Application::create(
+		numProgramArguments,
+		programArgumentsPtr,
+		"com.screenshare",
+		Gio::ApplicationFlags::APPLICATION_NON_UNIQUE
+	);
 	client::VideoPlayer videoPlayer(misc::tcpEndpointFromString(endpoint));
 	return app->run(videoPlayer);
 }

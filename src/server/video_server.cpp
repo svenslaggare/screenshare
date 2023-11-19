@@ -13,53 +13,94 @@ namespace screenshare::server {
 	}
 
 	void VideoServer::run(const std::string& displayName, int windowId) {
+		video::VideoEncoder videoEncoder("mp4");
+		auto videoStream = videoEncoder.addVideoStream(1920, 1080, 30);
+		if (!videoStream) {
+			return;
+		}
+
+		auto acceptorThread = std::thread([&]() {
+			while (true) {
+				boost::asio::ip::tcp::socket socket(mIOContext);
+				mAcceptor.accept(socket);
+
+				std::cout << "Accepted client: " << socket.remote_endpoint() << std::endl;
+				if (auto error = screenshare::video::network::sendAVCodecParameters(socket, videoStream->encoder.get())) {
+					std::cout << error << std::endl;
+					continue;
+				}
+
+				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
+				mClientSockets.push_back(std::move(socket));
+			}
+		});
+
 		screengrabber::ScreenGrabberX11 screenGrabber(displayName, windowId);
 		std::cout << "Grabbing: " << screenGrabber.width() << "x" << screenGrabber.height() << std::endl;
 
+		auto streamFrameRate = (double)videoEncoder.streams()[0].encoder->time_base.den
+								/ (double)videoEncoder.streams()[0].encoder->time_base.num;
+
+		video::Converter converter;
+		video::network::PacketSender packetSender;
 		while (true) {
-			boost::asio::ip::tcp::socket socket(mIOContext);
-			mAcceptor.accept(socket);
-			std::cout << "Accepted: " << socket.remote_endpoint() << std::endl;
+			misc::RateSleeper rateSleeper(streamFrameRate);
+//			misc::TimeMeasurement frameTM("Frame time");
 
-			video::VideoEncoder videoEncoder("mp4");
-			auto videoStream = videoEncoder.addVideoStream(1920, 1080, 30);
-			if (!videoStream) {
-				continue;
+//			std::cout << "Frame PTS: " << videoStream->frame->pts << std::endl;
+//			misc::TimeMeasurement grabTM("Grab time");
+			auto grabbedFrame = screenGrabber.grab();
+//			grabTM.print();
+
+			if (!createFrame(videoStream, converter, grabbedFrame)) {
+				break;
 			}
 
-			if (auto error = screenshare::video::network::sendAVCodecParameters(socket, videoStream->encoder.get())) {
-				std::cout << error << std::endl;
-				continue;
-			}
-
-			auto streamFrameRate = (double)videoEncoder.streams()[0].encoder->time_base.den / (double)videoEncoder.streams()[0].encoder->time_base.num;
-
-			video::Converter converter;
-			video::network::PacketSender packetSender;
-			while (true) {
-				misc::RateSleeper rateSleeper(streamFrameRate);
-				misc::TimeMeasurement frameTM("Frame time");
-
-				std::cout << "Frame PTS: " << videoStream->frame->pts << std::endl;
-				misc::TimeMeasurement grabTM("Grab time");
-				auto grabbedFrame = screenGrabber.grab();
-				grabTM.print();
-
-				if (!createFrame(videoStream, converter, grabbedFrame)) {
-					break;
-				}
-
-				auto done = encodeFrameAndSend(socket, videoStream, packetSender);
-
-				frameTM.print();
-				std::cout << std::endl;
-
-				if (done) {
-					break;
+			std::vector<Socket*> clientSockets;
+			{
+				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
+				for (auto& socket : mClientSockets) {
+					clientSockets.push_back(&socket);
 				}
 			}
 
-			std::cout << "Done encoding." << std::endl;
+			std::vector<boost::system::error_code> socketErrors;
+			auto done = encodeFrameAndSend(clientSockets, videoStream, packetSender, socketErrors);
+
+			{
+				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
+				std::size_t socketIndex = 0;
+				mClientSockets.erase(
+					std::remove_if(
+						mClientSockets.begin(),
+						mClientSockets.end(),
+						[&](auto& socket) {
+							auto socketError = socketErrors[socketIndex];
+							bool failed = socketError.failed();
+							if (failed) {
+								std::cout << "Removing client #" << socketIndex << " due to: " << socketError << std::endl;
+							}
+
+							socketIndex++;
+							return failed;
+						}
+					),
+					mClientSockets.end()
+				);
+			}
+
+//			frameTM.print();
+//			std::cout << std::endl;
+
+			if (done) {
+				break;
+			}
+		}
+
+		std::cout << "Done encoding." << std::endl;
+
+		if (acceptorThread.joinable()) {
+			acceptorThread.join();
 		}
 	}
 
@@ -71,7 +112,7 @@ namespace screenshare::server {
 			return false;
 		}
 
-		misc::TimeMeasurement timeMeasurement("Convert time");
+//		misc::TimeMeasurement timeMeasurement("Convert time");
 		auto convertResult = converter.convert(
 			grabbedFrame.width, grabbedFrame.height, grabbedFrame.format,
 			grabbedFrame.data, grabbedFrame.lineSize,
@@ -89,13 +130,16 @@ namespace screenshare::server {
 		return true;
 	}
 
-	bool VideoServer::encodeFrameAndSend(boost::asio::ip::tcp::socket& socket,
+	bool VideoServer::encodeFrameAndSend(std::vector<Socket*>& sockets,
 										 video::OutputStream* videoStream,
-										 video::network::PacketSender& packetSender) {
+										 video::network::PacketSender& packetSender,
+										 std::vector<boost::system::error_code>& socketErrors) {
 		if (avcodec_send_frame(videoStream->encoder.get(), videoStream->frame.get()) < 0) {
 			std::cout << "avcodec_send_frame failed" << std::endl;
 			return true;
 		}
+
+		socketErrors.resize(sockets.size());
 
 		bool done = false;
 		auto packet = videoStream->packet.get();
@@ -114,11 +158,10 @@ namespace screenshare::server {
 			av_packet_rescale_ts(packet, videoStream->encoder->time_base, stream->time_base);
 			packet->stream_index = stream->index;
 
-			misc::TimeMeasurement sendTM("Send time");
-			if (auto error = packetSender.send(socket, packet)) {
-				std::cout << error << std::endl;
-				done = true;
-				break;
+//			misc::TimeMeasurement sendTM("Send time");
+			for (std::size_t socketIndex = 0; socketIndex < sockets.size(); socketIndex++) {
+				auto socket = sockets[socketIndex];
+				socketErrors[socketIndex] = packetSender.send(*socket, packet);
 			}
 		}
 

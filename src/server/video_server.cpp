@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "video_server.h"
-#include "../screengrabber/x11.h"
 #include "../video/encoder.h"
 #include "../video/network.h"
 #include "../misc/rate_sleeper.h"
@@ -12,7 +11,7 @@ namespace screenshare::server {
 		std::cout << "Running at " << bind << std::endl;
 	}
 
-	void VideoServer::run(const screengrabber::GrabberSpec& spec) {
+	void VideoServer::run(std::unique_ptr<screengrabber::ScreenGrabber> screenGrabber) {
 		video::VideoEncoder videoEncoder("mp4");
 		auto videoStream = videoEncoder.addVideoStream(1920, 1080, 30);
 		if (!videoStream) {
@@ -33,8 +32,7 @@ namespace screenshare::server {
 			std::cout << "Context done with error: " << error << std::endl;
 		});
 
-		screengrabber::ScreenGrabberX11 screenGrabber(spec);
-		std::cout << "Grabbing: " << screenGrabber.width() << "x" << screenGrabber.height() << std::endl;
+		std::cout << "Grabbing: " << screenGrabber->width() << "x" << screenGrabber->height() << std::endl;
 
 		auto streamFrameRate = (double)videoStream->encoder->time_base.den / (double)videoStream->encoder->time_base.num;
 
@@ -46,7 +44,7 @@ namespace screenshare::server {
 
 //			std::cout << "Frame PTS: " << videoStream->frame->pts << std::endl;
 //			misc::TimeMeasurement grabTM("Grab time");
-			auto grabbedFrame = screenGrabber.grab();
+			auto grabbedFrame = screenGrabber->grab();
 //			grabTM.print();
 
 			if (!createFrame(videoStream, converter, grabbedFrame)) {

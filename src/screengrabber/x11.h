@@ -10,22 +10,10 @@
 #include <X11/extensions/XShm.h>
 
 #include "../video/common.h"
+#include "common.h"
 
 namespace screenshare::screengrabber {
-	struct GrabbedFrame {
-		int width = 0;
-		int height = 0;
-		AVPixelFormat format = AVPixelFormat::AV_PIX_FMT_NONE;
-		std::uint8_t* data = nullptr;
-		int lineSize = 0;
-	};
-
-	struct GrabberSpec {
-		std::string displayName;
-		int windowId = 0;
-	};
-
-	class ScreenGrabberX11 {
+	class ScreenGrabberX11 : public ScreenGrabber {
 	private:
 		Display* mDisplay = nullptr;
 		int mWindowId;
@@ -35,12 +23,17 @@ namespace screenshare::screengrabber {
 		XShmSegmentInfo mX11SharedMemory;
 		XImage* mImage = nullptr;
 	public:
+		struct GrabberSpec {
+			std::string displayName;
+			int windowId = 0;
+		};
+
 		explicit ScreenGrabberX11(const GrabberSpec& spec);
-		~ScreenGrabberX11();
+		~ScreenGrabberX11() override;
 
-		int width() const;
-		int height() const;
+		int width() const override;
+		int height() const override;
 
-		GrabbedFrame grab();
+		GrabbedFrame grab() override;
 	};
 }

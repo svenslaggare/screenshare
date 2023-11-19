@@ -1,5 +1,6 @@
 #pragma once
 #include <boost/asio.hpp>
+#include "../screengrabber/common.h"
 
 namespace screenshare::video {
 	class OutputStream;
@@ -12,7 +13,6 @@ namespace screenshare::video {
 
 namespace screenshare::screengrabber {
 	class GrabbedFrame;
-	struct GrabberSpec;
 }
 
 namespace screenshare::server {
@@ -45,6 +45,6 @@ namespace screenshare::server {
 	public:
 		explicit VideoServer(boost::asio::ip::tcp::endpoint bind);
 
-		void run(const screengrabber::GrabberSpec& spec);
+		void run(std::unique_ptr<screengrabber::ScreenGrabber> screenGrabber);
 	};
 }

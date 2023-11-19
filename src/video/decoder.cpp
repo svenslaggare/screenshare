@@ -17,7 +17,7 @@ namespace screenshare::video {
 	int PacketDecoder::decode(AVPacket* packet,
 							  AVCodecContext* codecContext,
 							  AVFrame* frame,
-							  std::function<void(AVCodecContext*, AVFrame*)> callback) {
+							  std::function<void (AVCodecContext*, AVFrame*)> callback) {
 		if (auto response = avcodec_send_packet(codecContext, packet) < 0) {
 			std::cout << "Error while sending a packet to the decoder: " << makeAvErrorString(response) << std::endl;
 			return response;
@@ -82,7 +82,7 @@ namespace screenshare::video {
 							  AVCodecContext* codecContext,
 							  AVFrame* frame,
 							  std::uint8_t* destination,
-							  std::function<void(AVCodecContext*)> callback) {
+							  std::function<void (AVCodecContext*)> callback) {
 		if (auto response = avcodec_send_packet(codecContext, packet) < 0) {
 			std::cout << "Error while sending a packet to the decoder: " << makeAvErrorString(response) << std::endl;
 			return response;

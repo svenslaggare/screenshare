@@ -147,7 +147,6 @@ namespace screenshare::server {
 			return { true, {} };
 		}
 
-
 		bool done = false;
 		auto packet = videoStream->packet.get();
 		auto stream = videoStream->stream;

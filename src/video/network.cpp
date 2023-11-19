@@ -49,16 +49,23 @@ namespace screenshare::video::network {
 		return &mCodecParameters;
 	}
 
+	namespace {
+		AVPacket serializePacket(AVPacket* packet) {
+			AVPacket packetSerialized;
+			packetSerialized = *packet;
+			packetSerialized.data = nullptr;
+			packetSerialized.buf = nullptr;
+			packetSerialized.side_data = nullptr;
+			packetSerialized.side_data_elems = 0;
+
+			return packetSerialized;
+		}
+	}
+
 	boost::system::error_code PacketSender::send(boost::asio::ip::tcp::socket& socket, AVPacket* packet) {
 		boost::system::error_code error;
 
-		AVPacket packetSerialized;
-		packetSerialized = *packet;
-		packetSerialized.data = nullptr;
-		packetSerialized.buf = nullptr;
-		packetSerialized.side_data = nullptr;
-		packetSerialized.side_data_elems = 0;
-
+		auto packetSerialized = serializePacket(packet);
 		boost::asio::write(
 			socket,
 			std::array {
@@ -69,6 +76,31 @@ namespace screenshare::video::network {
 		);
 
 		return error;
+	}
+
+	PacketSender::AsyncResult::AsyncResult(AVPacket* packet)
+		: packetSerialized(serializePacket(packet)),
+		  buffers({
+			  boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&packetSerialized), sizeof(AVPacket)),
+			  boost::asio::buffer(packet->data, packet->size),
+		  }) {
+
+	}
+
+	std::shared_ptr<PacketSender::AsyncResult> PacketSender::sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet) {
+		auto asyncResult = std::make_shared<AsyncResult>(packet);
+
+		boost::asio::async_write(
+			socket,
+			asyncResult->buffers,
+			[asyncResult](const boost::system::error_code& error, size_t /*bytes_transferred*/) {
+				asyncResult->error = error;
+				asyncResult->done = true;
+				asyncResult->done.notify_one();
+			}
+		);
+
+		return asyncResult;
 	}
 
 	PacketReceiver::PacketReceiver(AVCodecParameters* codecParameters) {

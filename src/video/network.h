@@ -1,10 +1,11 @@
 #pragma once
 #include <memory>
+#include <array>
+#include <iostream>
+#include <optional>
 
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>
-#include <iostream>
-#include <optional>
 
 #include "common.h"
 #include "../misc/time_measurement.h"
@@ -26,6 +27,18 @@ namespace screenshare::video::network {
 	class PacketSender {
 	public:
 		boost::system::error_code send(boost::asio::ip::tcp::socket& socket, AVPacket* packet);
+
+		struct AsyncResult {
+			AVPacket packetSerialized {};
+			std::array<boost::asio::mutable_buffers_1, 2> buffers;
+
+			boost::system::error_code error;
+			std::atomic<bool> done = false;
+
+			explicit AsyncResult(AVPacket* packet);
+		};
+
+		std::shared_ptr<AsyncResult> sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet);
 	};
 
 	class PacketReceiver {

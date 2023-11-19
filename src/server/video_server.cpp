@@ -21,20 +21,16 @@ namespace screenshare::server {
 
 		mRun.store(true);
 
-		auto acceptorThread = std::thread([&]() {
-			while (mRun.load()) {
-				boost::asio::ip::tcp::socket socket(mIOContext);
-				mAcceptor.accept(socket);
+		accept(videoStream);
 
-				std::cout << "Accepted client: " << socket.remote_endpoint() << std::endl;
-				if (auto error = screenshare::video::network::sendAVCodecParameters(socket, videoStream->encoder.get())) {
-					std::cout << error << std::endl;
-					continue;
-				}
+		auto contextThread = std::thread([&]() {
+			boost::system::error_code error;
 
-				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
-				mClientSockets.push_back(std::move(socket));
+			while (!error.failed() && mRun.load()) {
+				mIOContext.run(error);
 			}
+
+			std::cout << "Context done with error: " << error << std::endl;
 		});
 
 		screengrabber::ScreenGrabberX11 screenGrabber(displayName, windowId);
@@ -58,11 +54,11 @@ namespace screenshare::server {
 				break;
 			}
 
-			std::vector<Socket*> clientSockets;
+			std::vector<std::tuple<ClientId, Socket*>> clientSockets;
 			{
 				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
-				for (auto& socket : mClientSockets) {
-					clientSockets.push_back(&socket);
+				for (auto& [clientId, socket] : mClientSockets) {
+					clientSockets.emplace_back( clientId, socket.get() );
 				}
 			}
 
@@ -70,20 +66,12 @@ namespace screenshare::server {
 
 			{
 				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
-				std::size_t socketIndex = 0;
-				std::erase_if(
-					mClientSockets,
-					[&](auto& socket) {
-						auto socketError = socketErrors[socketIndex];
-						bool failed = socketError.failed();
-						if (failed) {
-							std::cout << "Removing client #" << socketIndex << " due to: " << socketError << std::endl;
-						}
-
-						socketIndex++;
-						return failed;
+				for (auto& [clientId, socketError] : socketErrors) {
+					if (socketError) {
+						std::cout << "Removing client #" << clientId << " due to: " << socketError << std::endl;
+						mClientSockets.erase(clientId);
 					}
-				);
+				}
 			}
 
 //			frameTM.print();
@@ -97,9 +85,35 @@ namespace screenshare::server {
 		std::cout << "Done encoding." << std::endl;
 
 		mRun.store(false);
-		if (acceptorThread.joinable()) {
-			acceptorThread.join();
+		mIOContext.stop();
+
+		if (contextThread.joinable()) {
+			contextThread.join();
 		}
+	}
+
+	void VideoServer::accept(video::OutputStream* videoStream) {
+		auto socket = std::make_shared<Socket>(mIOContext);
+
+		mAcceptor.async_accept(
+			*socket,
+			[this, videoStream, socket](boost::system::error_code acceptFailed) {
+				if (!acceptFailed) {
+					if (auto error = screenshare::video::network::sendAVCodecParameters(*socket, videoStream->encoder.get())) {
+						std::cout << "Failed to send codec parameters due to: " << error << std::endl;
+					} else {
+						std::lock_guard<std::mutex> guard(mClientSocketsMutex);
+						auto clientId = mNextClientId++;
+						std::cout << "Accepted client #" << clientId << ": " << socket->remote_endpoint() << std::endl;
+						mClientSockets[clientId] = socket;
+					}
+				} else {
+					std::cout << "Failed to accept client due to: " << acceptFailed << std::endl;
+				}
+
+				accept(videoStream);
+			}
+		);
 	}
 
 	bool VideoServer::createFrame(video::OutputStream* videoStream,
@@ -128,19 +142,20 @@ namespace screenshare::server {
 		return true;
 	}
 
-	std::tuple<bool, std::vector<boost::system::error_code>> VideoServer::encodeFrameAndSend(std::vector<Socket*>& sockets,
-																							 video::OutputStream* videoStream,
-																							 video::network::PacketSender& packetSender) {
+	std::tuple<bool, std::vector<VideoServer::SendResult>> VideoServer::encodeFrameAndSend(std::vector<std::tuple<ClientId, Socket*>>& sockets,
+																						   video::OutputStream* videoStream,
+																						   video::network::PacketSender& packetSender) {
 		if (avcodec_send_frame(videoStream->encoder.get(), videoStream->frame.get()) < 0) {
 			std::cout << "avcodec_send_frame failed" << std::endl;
 			return { true, {} };
 		}
 
-		std::vector<boost::system::error_code> socketErrors(sockets.size());
 
 		bool done = false;
 		auto packet = videoStream->packet.get();
 		auto stream = videoStream->stream;
+
+		std::vector<std::tuple<ClientId, std::shared_ptr<video::network::PacketSender::AsyncResult>>> sendResults;
 		while (true) {
 			auto response = avcodec_receive_packet(videoStream->encoder.get(), packet);
 			if (response == AVERROR(EAGAIN) || response == AVERROR_EOF) {
@@ -156,10 +171,15 @@ namespace screenshare::server {
 			packet->stream_index = stream->index;
 
 //			misc::TimeMeasurement sendTM("Send time");
-			for (std::size_t socketIndex = 0; socketIndex < sockets.size(); socketIndex++) {
-				auto socket = sockets[socketIndex];
-				socketErrors[socketIndex] = packetSender.send(*socket, packet);
+			for (auto& [clientId, socket] : sockets) {
+				sendResults.emplace_back(clientId, packetSender.sendAsync(*socket, packet));
 			}
+		}
+
+		std::vector<SendResult> socketErrors;
+		for (auto [clientId, sendResult] : sendResults) {
+			sendResult->done.wait(false);
+			socketErrors.emplace_back(clientId, sendResult->error);
 		}
 
 		return { done, socketErrors };

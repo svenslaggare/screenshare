@@ -20,6 +20,11 @@ namespace screenshare::screengrabber {
 		int lineSize = 0;
 	};
 
+	struct GrabberSpec {
+		std::string displayName;
+		int windowId = 0;
+	};
+
 	class ScreenGrabberX11 {
 	private:
 		Display* mDisplay = nullptr;
@@ -30,7 +35,7 @@ namespace screenshare::screengrabber {
 		XShmSegmentInfo mX11SharedMemory;
 		XImage* mImage = nullptr;
 	public:
-		ScreenGrabberX11(const std::string& displayName, int windowId);
+		explicit ScreenGrabberX11(const GrabberSpec& spec);
 		~ScreenGrabberX11();
 
 		int width() const;

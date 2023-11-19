@@ -12,7 +12,7 @@ namespace screenshare::server {
 		std::cout << "Running at " << bind << std::endl;
 	}
 
-	void VideoServer::run(const std::string& displayName, int windowId) {
+	void VideoServer::run(const screengrabber::GrabberSpec& spec) {
 		video::VideoEncoder videoEncoder("mp4");
 		auto videoStream = videoEncoder.addVideoStream(1920, 1080, 30);
 		if (!videoStream) {
@@ -33,11 +33,10 @@ namespace screenshare::server {
 			std::cout << "Context done with error: " << error << std::endl;
 		});
 
-		screengrabber::ScreenGrabberX11 screenGrabber(displayName, windowId);
+		screengrabber::ScreenGrabberX11 screenGrabber(spec);
 		std::cout << "Grabbing: " << screenGrabber.width() << "x" << screenGrabber.height() << std::endl;
 
-		auto streamFrameRate = (double)videoEncoder.streams()[0].encoder->time_base.den
-								/ (double)videoEncoder.streams()[0].encoder->time_base.num;
+		auto streamFrameRate = (double)videoStream->encoder->time_base.den / (double)videoStream->encoder->time_base.num;
 
 		video::Converter converter;
 		video::network::PacketSender packetSender;

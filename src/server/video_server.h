@@ -12,6 +12,7 @@ namespace screenshare::video {
 
 namespace screenshare::screengrabber {
 	class GrabbedFrame;
+	struct GrabberSpec;
 }
 
 namespace screenshare::server {
@@ -44,6 +45,6 @@ namespace screenshare::server {
 	public:
 		explicit VideoServer(boost::asio::ip::tcp::endpoint bind);
 
-		void run(const std::string& displayName, int windowId);
+		void run(const screengrabber::GrabberSpec& spec);
 	};
 }

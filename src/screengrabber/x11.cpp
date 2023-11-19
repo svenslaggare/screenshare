@@ -1,12 +1,12 @@
 #include "x11.h"
 
 namespace screenshare::screengrabber {
-	ScreenGrabberX11::ScreenGrabberX11(const std::string& displayName, int windowId)
-		: mDisplay(XOpenDisplay(displayName.c_str())),
-		  mWindowId(windowId),
+	ScreenGrabberX11::ScreenGrabberX11(const GrabberSpec& spec)
+		: mDisplay(XOpenDisplay(spec.displayName.c_str())),
+		  mWindowId(spec.windowId),
 		  mX11SharedMemory({}) {
 		XWindowAttributes attributes;
-		XGetWindowAttributes(mDisplay, windowId, &attributes);
+		XGetWindowAttributes(mDisplay, spec.windowId, &attributes);
 		mWidth = attributes.width;
 		mHeight = attributes.height;
 

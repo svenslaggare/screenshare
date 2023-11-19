@@ -6,6 +6,7 @@ namespace screenshare::client {
 		  mControlPanelBox(Gtk::Orientation::ORIENTATION_HORIZONTAL),
 		  mConnectButton("Connect"),
 		  mDisconnectButton("Disconnect"),
+		  mImage("assets/wait_for_connection.png"),
 		  mEndpoint(std::move(endpoint)) {
 		set_border_width(10);
 		set_size_request(720, 480);
@@ -13,7 +14,6 @@ namespace screenshare::client {
 		add(mMainBox);
 		mMainBox.show();
 
-		mImage.set(mPixBuf);
 		mMainBox.pack_start(mImage, true, true, 0);
 		mImage.show();
 
@@ -27,6 +27,9 @@ namespace screenshare::client {
 		mDisconnectButton.signal_clicked().connect(sigc::mem_fun(*this, &VideoPlayer::disconnectButtonClicked));
 		mControlPanelBox.pack_start(mDisconnectButton, true, true, 0);
 		mDisconnectButton.show();
+
+		mControlPanelBox.pack_start(mInfoTextView, true, true, 0);
+		mInfoTextView.show();
 
 		sigc::slot<bool ()> slot = sigc::bind(sigc::mem_fun(*this, &VideoPlayer::onTimerCallback), 0);
 		mTimerSlot = Glib::signal_timeout().connect(slot, 16);
@@ -56,14 +59,14 @@ namespace screenshare::client {
 			throw std::runtime_error("Failed to allocate memory for AVPacket");
 		}
 
-		std::cout << "Stream started " << codecParameterReceiver.codecParameters()->width << "x" << codecParameterReceiver.codecParameters()->height << std::endl;
+		mInfoBuffer.addLine("Stream started " + std::to_string(codecParameterReceiver.codecParameters()->width) + "x" + std::to_string(codecParameterReceiver.codecParameters()->height));
 		mRun.store(true);
 
 		video::PacketDecoder packetDecoder;
 		while (mRun.load()) {
 			if (auto error = packetReceiver.receive(socket, packet.get())) {
 				if (error == boost::asio::error::eof) {
-					std::cout << "Connected closed by server." << std::endl;
+					mInfoBuffer.addLine("Connected closed by server.");
 					break; // Connection closed cleanly by peer.
 				} else if (error) {
 					throw boost::system::system_error(error); // Some other error.
@@ -95,7 +98,7 @@ namespace screenshare::client {
 
 			std::cout << std::endl;
 			if (response < 0) {
-				std::cout << "Failed to decode packet (" << response << ")." << std::endl;
+				mInfoBuffer.addLine("Failed to decode packet (" + std::to_string(response) + ").");
 				break;
 			}
 		}
@@ -106,12 +109,16 @@ namespace screenshare::client {
 			fetchData();
 			std::cout << "Done with fetch data." << std::endl;
 		} catch (const std::exception& e) {
-			std::cout << "Failed to connect due to: " << e.what() << std::endl;
+			mInfoBuffer.addLine(std::string("Failed to connect due to: ") + e.what());
+			mInfoTextView.set_buffer(mInfoBuffer.gtkBuffer());
 		}
 	}
 
 	bool VideoPlayer::onTimerCallback(int) {
-		mImage.set(mPixBuf);
+		if (mPixBuf) {
+			mImage.set(mPixBuf);
+		}
+
 		return true;
 	}
 

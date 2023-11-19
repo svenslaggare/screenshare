@@ -1,5 +1,6 @@
 set(LOCAL_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/video_player.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/info_buffer.cpp
 )
 
 set(SOURCES ${SOURCES} ${LOCAL_SOURCES} PARENT_SCOPE)

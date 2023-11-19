@@ -13,9 +13,12 @@
 #include <gtkmm/box.h>
 #include <gdkmm/pixbuf.h>
 #include <glibmm/main.h>
+#include <gtkmm/textbuffer.h>
+#include <gtkmm/textview.h>
 
 #include "../video/network.h"
 #include "../video/decoder.h"
+#include "info_buffer.h"
 
 namespace screenshare::client {
 	class VideoPlayer : public Gtk::Window {
@@ -25,6 +28,9 @@ namespace screenshare::client {
 
 		Gtk::Button mConnectButton;
 		Gtk::Button mDisconnectButton;
+
+		InfoBuffer mInfoBuffer;
+		Gtk::TextView mInfoTextView;
 
 		Gtk::Image mImage;
 		Glib::RefPtr<Gdk::Pixbuf> mPixBuf;

@@ -223,21 +223,7 @@ namespace screenshare::video {
 				outputStream->encoder->time_base = outputStream->stream->time_base;
 				outputStream->encoder->framerate = outputStream->stream->time_base;
 
-				outputStream->encoder->gop_size = 12; //emit one intra frame every twelve frames at most
-//				outputStream->encoder->keyint_min = 1;
-//				outputStream->encoder->delay = 1;
-
 				outputStream->encoder->pix_fmt = AV_PIX_FMT_YUV420P;
-				if (outputStream->encoder->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
-					outputStream->encoder->max_b_frames = 2;
-				}
-
-				if (outputStream->encoder->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
-					/* Needed to avoid using macro blocks in which some coeffs overflow.
-					 * This does not happen with normal video, it just happens here as
-					 * the motion of the chroma plane does not match the luma plane. */
-					outputStream->encoder->mb_decision = 2;
-				}
 
 				outputStream->encoder->gop_size = 15;
 				outputStream->encoder->max_b_frames = 1;

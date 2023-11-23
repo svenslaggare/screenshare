@@ -7,11 +7,12 @@
 
 namespace screenshare::server {
 	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind)
-		: mAcceptor(mIOContext, bind) {
+		: mAcceptor(mIOContext, bind),
+		  mClientActions({}) {
 		std::cout << "Running at " << bind << std::endl;
 	}
 
-	void VideoServer::run(std::unique_ptr<screengrabber::ScreenGrabber> screenGrabber) {
+	void VideoServer::run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor) {
 		video::VideoEncoder videoEncoder("mp4");
 		auto videoStream = videoEncoder.addVideoStream(1920, 1080, 30);
 		if (!videoStream) {
@@ -32,7 +33,7 @@ namespace screenshare::server {
 			std::cout << "Context done with error: " << error << std::endl;
 		});
 
-		std::cout << "Grabbing: " << screenGrabber->width() << "x" << screenGrabber->height() << std::endl;
+		std::cout << "Grabbing: " << screenInteractor->width() << "x" << screenInteractor->height() << std::endl;
 
 		auto streamFrameRate = (double)videoStream->encoder->time_base.den / (double)videoStream->encoder->time_base.num;
 
@@ -44,7 +45,7 @@ namespace screenshare::server {
 
 //			std::cout << "Frame PTS: " << videoStream->frame->pts << std::endl;
 //			misc::TimeMeasurement grabTM("Grab time");
-			auto grabbedFrame = screenGrabber->grab();
+			auto grabbedFrame = screenInteractor->grab();
 //			grabTM.print();
 
 			if (!createFrame(videoStream, converter, grabbedFrame)) {
@@ -77,6 +78,14 @@ namespace screenshare::server {
 			if (done) {
 				break;
 			}
+
+			{
+				auto guard = mClientActions.guard();
+				auto clientActions = std::move(guard.get());
+				for (auto& clientAction : clientActions) {
+					screenInteractor->handleClientAction(clientAction);
+				}
+			}
 		}
 
 		std::cout << "Done encoding." << std::endl;
@@ -102,6 +111,9 @@ namespace screenshare::server {
 						std::lock_guard<std::mutex> guard(mClientSocketsMutex);
 						auto clientId = mNextClientId++;
 						std::cout << "Accepted client #" << clientId << ": " << socket->remote_endpoint() << std::endl;
+
+						receiveFromClient(socket);
+
 						mClientSockets[clientId] = socket;
 					}
 				} else {
@@ -113,9 +125,26 @@ namespace screenshare::server {
 		);
 	}
 
+	void VideoServer::receiveFromClient(std::shared_ptr<Socket> socket) {
+		client::ClientAction::receiveAsync(
+			socket,
+			[this, socket](boost::system::error_code error, std::shared_ptr<client::ClientAction> clientAction) {
+				if (!error) {
+					std::cout << (int)clientAction->type << ", " << clientAction->data.keyPress.key  << std::endl;
+
+					{
+						mClientActions.guard()->push_back(*clientAction);
+					}
+
+					receiveFromClient(socket);
+				}
+			}
+		);
+	}
+
 	bool VideoServer::createFrame(video::OutputStream* videoStream,
 								  video::Converter& converter,
-								  const screengrabber::GrabbedFrame& grabbedFrame) {
+								  const screeninteractor::GrabbedFrame& grabbedFrame) {
 		if (av_frame_make_writable(videoStream->frame.get()) < 0) {
 			std::cout << "av_frame_make_writable failed" << std::endl;
 			return false;

@@ -4,16 +4,15 @@
 #include <tuple>
 
 #include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <X11/extensions/XShm.h>
 
-#include "../video/common.h"
 #include "common.h"
 
-namespace screenshare::screengrabber {
-	class ScreenGrabberX11 : public ScreenGrabber {
+#include "../video/common.h"
+#include "../client/actions.h"
+
+namespace screenshare::screeninteractor {
+	class ScreenInteractorX11 : public ScreenInteractor {
 	private:
 		Display* mDisplay = nullptr;
 		int mWindowId;
@@ -28,12 +27,15 @@ namespace screenshare::screengrabber {
 			int windowId = 0;
 		};
 
-		explicit ScreenGrabberX11(const GrabberSpec& spec);
-		~ScreenGrabberX11() override;
+		explicit ScreenInteractorX11(const GrabberSpec& spec);
+		~ScreenInteractorX11() override;
 
 		int width() const override;
 		int height() const override;
 
 		GrabbedFrame grab() override;
+
+	private:
+		virtual bool handleClientAction(const client::ClientAction& clientAction) override;
 	};
 }

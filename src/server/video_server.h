@@ -1,6 +1,9 @@
 #pragma once
 #include <boost/asio.hpp>
-#include "../screengrabber/common.h"
+
+#include "../screeninteractor//common.h"
+#include "../client/actions.h"
+#include "../misc/concurrency.hpp"
 
 namespace screenshare::video {
 	class OutputStream;
@@ -11,7 +14,7 @@ namespace screenshare::video {
 	}
 }
 
-namespace screenshare::screengrabber {
+namespace screenshare::screeninteractor {
 	class GrabbedFrame;
 }
 
@@ -28,10 +31,12 @@ namespace screenshare::server {
 		std::uint64_t mNextClientId = 1;
 		std::unordered_map<ClientId, std::shared_ptr<Socket>> mClientSockets;
 
+		misc::ResourceMutex<std::vector<client::ClientAction>> mClientActions;
+
 		bool createFrame(
 			video::OutputStream* videoStream,
 			video::Converter& converter,
-			const screengrabber::GrabbedFrame& grabbedFrame
+			const screeninteractor::GrabbedFrame& grabbedFrame
 		);
 
 		using SendResult = std::tuple<ClientId, boost::system::error_code>;
@@ -42,9 +47,10 @@ namespace screenshare::server {
 		);
 
 		void accept(video::OutputStream* acceptFailed);
+		void receiveFromClient(std::shared_ptr<Socket> socket);
 	public:
 		explicit VideoServer(boost::asio::ip::tcp::endpoint bind);
 
-		void run(std::unique_ptr<screengrabber::ScreenGrabber> screenGrabber);
+		void run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor);
 	};
 }

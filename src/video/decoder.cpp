@@ -97,7 +97,7 @@ namespace screenshare::video {
 				return response;
 			}
 
-			printDecodedFrame(codecContext, frame);
+//			printDecodedFrame(codecContext, frame);
 
 			if (!mConversion) {
 				mConversion = decltype(mConversion) {

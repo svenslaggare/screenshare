@@ -1,4 +1,6 @@
 #include "video_player.h"
+#include "actions.h"
+
 #include <fmt/format.h>
 
 namespace screenshare::client {
@@ -8,15 +10,22 @@ namespace screenshare::client {
 		  mConnectButton("Connect"),
 		  mDisconnectButton("Disconnect"),
 		  mImage("assets/wait_for_connection.png"),
-		  mEndpoint(std::move(endpoint)) {
+		  mEndpoint(std::move(endpoint)),
+		  mClientActions({}) {
 		set_border_width(10);
 		set_size_request(720, 480);
 
 		add(mMainBox);
 		mMainBox.show();
 
-		mMainBox.pack_start(mImage, true, true, 0);
+		mImageEventBox.add(mImage);
 		mImage.show();
+
+		mMainBox.pack_start(mImageEventBox, true, true, 0);
+		mImageEventBox.show();
+
+		mMainBox.signal_key_press_event().connect(sigc::mem_fun(*this, &VideoPlayer::keyPress));
+		mImageEventBox.signal_button_press_event().connect(sigc::mem_fun(*this, &VideoPlayer::mouseButtonPress));
 
 		mMainBox.pack_start(mControlPanelBox, true, true, 0);
 		mControlPanelBox.show();
@@ -84,7 +93,7 @@ namespace screenshare::client {
 				);
 			}
 
-			misc::TimeMeasurement timeMeasurement("");
+//			misc::TimeMeasurement timeMeasurement("");
 			auto response = packetDecoder.decode(
 				packet.get(),
 				packetReceiver.codecContext(),
@@ -92,13 +101,26 @@ namespace screenshare::client {
 				mPixBuf->get_pixels(),
 				[&](AVCodecContext* codecContext) {}
 			);
-			timeMeasurement.changePattern("decodePacket: " + std::to_string(response) + ", time: ");
-			timeMeasurement.print();
+//			timeMeasurement.changePattern("decodePacket: " + std::to_string(response) + ", time: ");
+//			timeMeasurement.print();
 
-			std::cout << std::endl;
+//			std::cout << std::endl;
 			if (response < 0) {
 				addInfoLine(fmt::format("Failed to decode packet ({})", response));
 				break;
+			}
+
+			decltype(mClientActions)::Type clientActions;
+			{
+				auto guard = mClientActions.guard();
+				clientActions = std::move(guard.get());
+			}
+
+			for (auto& clientAction : clientActions) {
+				if (auto error = clientAction.send(socket)) {
+					std::cout << "Failed to send action: " << error << std::endl;
+					return;
+				}
 			}
 		}
 	}
@@ -142,5 +164,18 @@ namespace screenshare::client {
 				runFetchData();
 			});
 		}
+	}
+
+	bool VideoPlayer::keyPress(GdkEventKey* key) {
+		std::cout << "Key press: " << key->string << std::endl;
+		mClientActions.guard()->push_back(client::ClientAction::keyPressed(key->string));
+		return false;
+	}
+
+	bool VideoPlayer::mouseButtonPress(GdkEventButton* mouseButton) {
+//		mMainBox.grab_focus();
+//		mImageEventBox.grab_focus();
+		std::cout << "Mouse press" << std::endl;
+		return false;
 	}
 }

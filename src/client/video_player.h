@@ -15,10 +15,15 @@
 #include <glibmm/main.h>
 #include <gtkmm/textbuffer.h>
 #include <gtkmm/textview.h>
+#include <gtkmm/eventbox.h>
+
+#include "info_buffer.h"
+#include "actions.h"
+
+#include "../misc/concurrency.hpp"
 
 #include "../video/network.h"
 #include "../video/decoder.h"
-#include "info_buffer.h"
 
 namespace screenshare::client {
 	class VideoPlayer : public Gtk::Window {
@@ -34,6 +39,7 @@ namespace screenshare::client {
 
 		Gtk::Image mImage;
 		Glib::RefPtr<Gdk::Pixbuf> mPixBuf;
+		Gtk::EventBox mImageEventBox;
 
 		boost::asio::ip::tcp::endpoint mEndpoint;
 		sigc::connection mTimerSlot;
@@ -41,10 +47,14 @@ namespace screenshare::client {
 		std::atomic<bool> mRun = false;
 		std::thread mReceiveThread;
 
+		misc::ResourceMutex<std::vector<client::ClientAction>> mClientActions;
+
 		void addInfoLine(std::string line);
 
 		void connectButtonClicked();
 		void disconnectButtonClicked();
+		bool keyPress(GdkEventKey* key);
+		bool mouseButtonPress(GdkEventButton* mouseButton);
 
 		bool onTimerCallback(int);
 

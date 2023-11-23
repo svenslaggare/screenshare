@@ -126,7 +126,7 @@ namespace screenshare::video::network {
 		AVPacket packetSerialized {};
 		boost::system::error_code error;
 
-		screenshare::misc::TimeMeasurement receiveTM("receive");
+//		screenshare::misc::TimeMeasurement receiveTM("receive");
 		boost::asio::read(
 			socket,
 			boost::asio::buffer(reinterpret_cast<uint8_t*>(&packetSerialized), sizeof(AVPacket)),
@@ -137,8 +137,8 @@ namespace screenshare::video::network {
 			return error;
 		}
 
-		std::cout << "received pts: " << packetSerialized.pts << std::endl;
-		std::cout << "packet size: " << packetSerialized.size << std::endl;
+//		std::cout << "received pts: " << packetSerialized.pts << std::endl;
+//		std::cout << "packet size: " << packetSerialized.size << std::endl;
 
 		if (packet->buf == nullptr || packetSerialized.size > packet->buf->size) {
 			av_new_packet(packet, packetSerialized.size);

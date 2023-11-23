@@ -1,7 +1,11 @@
 #pragma once
 #include "../video/common.h"
 
-namespace screenshare::screengrabber {
+namespace screenshare::client {
+	struct ClientAction;
+}
+
+namespace screenshare::screeninteractor {
 	struct GrabbedFrame {
 		int width = 0;
 		int height = 0;
@@ -18,5 +22,15 @@ namespace screenshare::screengrabber {
 		virtual int height() const = 0;
 
 		virtual GrabbedFrame grab() = 0;
+	};
+
+	class ClientActionHandler {
+	public:
+		virtual ~ClientActionHandler() = default;
+		virtual bool handleClientAction(const client::ClientAction& clientAction) = 0;
+	};
+
+	class ScreenInteractor : public ScreenGrabber, public ClientActionHandler {
+
 	};
 }

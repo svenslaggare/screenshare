@@ -1,17 +1,18 @@
 #include <string>
 
-#include "client/video_player.h"
-#include "screengrabber/x11.h"
-
-#include "server/video_server.h"
-
 #include "misc/network.h"
+
+#include "client/video_player.h"
+
+#include "screeninteractor/x11.h"
+#include "server/video_server.h"
 
 using namespace screenshare;
 
 void mainServer(const std::string& bind) {
 	server::VideoServer videoServer(misc::tcpEndpointFromString(bind));
-	videoServer.run(std::unique_ptr<screengrabber::ScreenGrabber>(new screengrabber::ScreenGrabberX11({ ":0", 0x1dd })));
+//	videoServer.run(std::unique_ptr<screeninteractor::ScreenInteractor>(new screeninteractor::ScreenInteractorX11({ ":0", 0x1dd })));
+	videoServer.run(std::unique_ptr<screeninteractor::ScreenInteractor>(new screeninteractor::ScreenInteractorX11({ ":0", 73400396 })));
 }
 
 int mainClient(const std::string& endpoint) {

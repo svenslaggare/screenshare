@@ -55,7 +55,7 @@ target_link_libraries(screenshare PRIVATE fmt)
 target_link_libraries(screenshare PRIVATE PkgConfig::LIBAV)
 target_link_libraries(screenshare PRIVATE ${Boost_LIBRARIES})
 target_link_libraries(screenshare PRIVATE ${GTKMM_LIBRARIES})
-target_link_libraries(screenshare PRIVATE ${X11_LIBRARIES})
+target_link_libraries(screenshare PRIVATE ${X11_LIBRARIES} Xtst)
 
 ##############################################################################################################
 # Include dirs

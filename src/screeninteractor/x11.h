@@ -21,6 +21,8 @@ namespace screenshare::screeninteractor {
 
 		XShmSegmentInfo mX11SharedMemory;
 		XImage* mImage = nullptr;
+
+		void makeWindowActive();
 	public:
 		struct GrabberSpec {
 			std::string displayName;
@@ -34,8 +36,6 @@ namespace screenshare::screeninteractor {
 		int height() const override;
 
 		GrabbedFrame grab() override;
-
-	private:
 		virtual bool handleClientAction(const client::ClientAction& clientAction) override;
 	};
 }

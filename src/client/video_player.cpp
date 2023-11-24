@@ -167,7 +167,6 @@ namespace screenshare::client {
 	}
 
 	bool VideoPlayer::keyPress(GdkEventKey* key) {
-		std::cout << "Key press: " << key->string << std::endl;
 		mClientActions.guard()->push_back(client::ClientAction::keyPressed(key->string));
 		return false;
 	}
@@ -175,7 +174,11 @@ namespace screenshare::client {
 	bool VideoPlayer::mouseButtonPress(GdkEventButton* mouseButton) {
 //		mMainBox.grab_focus();
 //		mImageEventBox.grab_focus();
-		std::cout << "Mouse press" << std::endl;
+		mClientActions.guard()->push_back(client::ClientAction::mouseButtonPressed(
+			mouseButton->button,
+			mouseButton->x / 1920.0,
+			mouseButton->y / 1080.0
+		));
 		return false;
 	}
 }

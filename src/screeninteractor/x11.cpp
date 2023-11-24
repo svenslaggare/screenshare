@@ -76,28 +76,10 @@ namespace screenshare::screeninteractor {
 			case client::ClientActionType::NoAction:
 				break;
 			case client::ClientActionType::KeyPressed: {
-				std::string key { clientAction.data.keyPress.key };
+				std::string key { clientAction.data.keyPressed.key };
 				auto keyCode = XKeysymToKeycode(mDisplay, XStringToKeysym(key.c_str()));
 
-				XEvent event {};
-				event.type = ClientMessage;
-				event.xclient.display = mDisplay;
-				event.xclient.window = mWindowId;
-				event.xclient.message_type = XInternAtom(mDisplay, "_NET_ACTIVE_WINDOW", False);
-				event.xclient.format = 32;
-				event.xclient.data.l[0] = 2L; /* 2 == Message from a window pager */
-				event.xclient.data.l[1] = CurrentTime;
-
-				XWindowAttributes windowAttributes {};
-				XGetWindowAttributes(mDisplay, mWindowId, &windowAttributes);
-				XSendEvent(
-					mDisplay,
-					windowAttributes.screen->root,
-					False,
-					SubstructureNotifyMask | SubstructureRedirectMask,
-					&event
-				);
-				XFlush(mDisplay);
+				makeWindowActive();
 
 				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
@@ -106,10 +88,53 @@ namespace screenshare::screeninteractor {
 
 				XTestFakeKeyEvent(mDisplay, keyCode, False, 0);
 				XFlush(mDisplay);
-				break;
+
+				return true;
+			}
+			case client::ClientActionType::MouseButtonPressed: {
+				auto mouseButton = clientAction.data.mouseButtonPressed.mouseButton;
+				auto x = (int)(clientAction.data.mouseButtonPressed.x * mWidth);
+				auto y = (int)(clientAction.data.mouseButtonPressed.y * mHeight);
+
+				XWarpPointer(mDisplay, None, mWindowId, 0, 0, 0, 0, x, y);
+				XFlush(mDisplay);
+
+				makeWindowActive();
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+				XTestFakeButtonEvent(mDisplay, mouseButton, True, CurrentTime);
+				XFlush(mDisplay);
+
+				XTestFakeButtonEvent(mDisplay, mouseButton, False, CurrentTime);
+				XFlush(mDisplay);
+
+				return true;
 			}
 		}
 
 		return false;
+	}
+
+	void ScreenInteractorX11::makeWindowActive() {
+		XEvent event {};
+		event.type = ClientMessage;
+		event.xclient.display = mDisplay;
+		event.xclient.window = mWindowId;
+		event.xclient.message_type = XInternAtom(mDisplay, "_NET_ACTIVE_WINDOW", False);
+		event.xclient.format = 32;
+		event.xclient.data.l[0] = 2L; /* 2 == Message from a window pager */
+		event.xclient.data.l[1] = CurrentTime;
+
+		XWindowAttributes windowAttributes {};
+		XGetWindowAttributes(mDisplay, mWindowId, &windowAttributes);
+		XSendEvent(
+			mDisplay,
+			windowAttributes.screen->root,
+			False,
+			SubstructureNotifyMask | SubstructureRedirectMask,
+			&event
+		);
+		XFlush(mDisplay);
 	}
 }

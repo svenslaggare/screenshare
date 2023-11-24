@@ -47,7 +47,10 @@ namespace screenshare::server {
 		);
 
 		void accept(video::OutputStream* acceptFailed);
-		void receiveFromClient(std::shared_ptr<Socket> socket);
+		void receiveFromClient(
+			std::shared_ptr<Socket> socket,
+			std::shared_ptr<client::ClientAction> clientAction
+		);
 	public:
 		explicit VideoServer(boost::asio::ip::tcp::endpoint bind);
 

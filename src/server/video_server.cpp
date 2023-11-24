@@ -83,7 +83,9 @@ namespace screenshare::server {
 				auto guard = mClientActions.guard();
 				auto clientActions = std::move(guard.get());
 				for (auto& clientAction : clientActions) {
-					screenInteractor->handleClientAction(clientAction);
+					if (!screenInteractor->handleClientAction(clientAction)) {
+						std::cout << "Unhandled command: " << clientAction.toString() << std::endl;
+					}
 				}
 			}
 		}
@@ -112,7 +114,7 @@ namespace screenshare::server {
 						auto clientId = mNextClientId++;
 						std::cout << "Accepted client #" << clientId << ": " << socket->remote_endpoint() << std::endl;
 
-						receiveFromClient(socket);
+						receiveFromClient(socket, std::make_shared<client::ClientAction>());
 
 						mClientSockets[clientId] = socket;
 					}
@@ -125,18 +127,21 @@ namespace screenshare::server {
 		);
 	}
 
-	void VideoServer::receiveFromClient(std::shared_ptr<Socket> socket) {
+	void VideoServer::receiveFromClient(std::shared_ptr<Socket> socket, std::shared_ptr<client::ClientAction> clientAction) {
+		clientAction->clear();
+
 		client::ClientAction::receiveAsync(
 			socket,
+			std::move(clientAction),
 			[this, socket](boost::system::error_code error, std::shared_ptr<client::ClientAction> clientAction) {
 				if (!error) {
-					std::cout << (int)clientAction->type << ", " << clientAction->data.keyPress.key  << std::endl;
+					std::cout << clientAction->toString() << std::endl;
 
 					{
 						mClientActions.guard()->push_back(*clientAction);
 					}
 
-					receiveFromClient(socket);
+					receiveFromClient(socket, clientAction);
 				}
 			}
 		);

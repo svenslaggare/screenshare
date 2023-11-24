@@ -9,10 +9,9 @@
 
 using namespace screenshare;
 
-void mainServer(const std::string& bind) {
+void mainServer(const std::string& bind, int windowId) {
 	server::VideoServer videoServer(misc::tcpEndpointFromString(bind));
-//	videoServer.run(std::unique_ptr<screeninteractor::ScreenInteractor>(new screeninteractor::ScreenInteractorX11({ ":0", 0x1dd })));
-	videoServer.run(std::unique_ptr<screeninteractor::ScreenInteractor>(new screeninteractor::ScreenInteractorX11({ ":0", 75497548 })));
+	videoServer.run(std::unique_ptr<screeninteractor::ScreenInteractor>(new screeninteractor::ScreenInteractorX11({ ":0", windowId })));
 }
 
 int mainClient(const std::string& endpoint) {
@@ -36,8 +35,8 @@ int main(int argc, char* argv[]) {
 		return mainClient(argv[2]);
 	}
 
-	if ((argc >= 3) && std::string(argv[1]) == "server") {
-		mainServer(argv[2]);
+	if ((argc >= 4) && std::string(argv[1]) == "server") {
+		mainServer(argv[2], std::stoi(argv[3]));
 		return 0;
 	}
 

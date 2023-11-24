@@ -47,6 +47,7 @@ namespace screenshare::client {
 		std::atomic<bool> mRun = false;
 		std::thread mReceiveThread;
 
+		misc::ResourceMutex<AVCodecParameters> mCodecParameters;
 		misc::ResourceMutex<std::vector<client::ClientAction>> mClientActions;
 
 		void addInfoLine(std::string line);

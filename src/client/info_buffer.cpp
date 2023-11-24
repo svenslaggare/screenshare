@@ -6,6 +6,10 @@ namespace screenshare::client {
 
 	}
 
+	std::size_t InfoBuffer::maxLines() const {
+		return mMaxLines;
+	}
+
 	Glib::RefPtr<Gtk::TextBuffer> InfoBuffer::gtkBuffer() {
 		std::lock_guard<std::mutex> guard(mMutex);
 

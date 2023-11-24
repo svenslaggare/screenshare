@@ -17,6 +17,8 @@ namespace screenshare::client {
 	public:
 		InfoBuffer();
 
+		std::size_t maxLines() const;
+
 		Glib::RefPtr<Gtk::TextBuffer> gtkBuffer();
 
 		void addLine(std::string newLine);

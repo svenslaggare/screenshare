@@ -11,6 +11,7 @@ namespace screenshare::client {
 		  mDisconnectButton("Disconnect"),
 		  mImage("assets/wait_for_connection.png"),
 		  mEndpoint(std::move(endpoint)),
+		  mCodecParameters({}),
 		  mClientActions({}) {
 		set_border_width(10);
 		set_size_request(720, 480);
@@ -41,6 +42,10 @@ namespace screenshare::client {
 		mControlPanelBox.pack_start(mInfoTextView, true, true, 0);
 		mInfoTextView.show();
 
+		for (int i = 0; i < mInfoBuffer.maxLines(); i++) {
+			addInfoLine("");
+		}
+
 		sigc::slot<bool ()> slot = sigc::bind(sigc::mem_fun(*this, &VideoPlayer::onTimerCallback), 0);
 		mTimerSlot = Glib::signal_timeout().connect(slot, 16);
 
@@ -57,6 +62,7 @@ namespace screenshare::client {
 		socket.connect(mEndpoint);
 
 		video::network::AVCodecParametersReceiver codecParameterReceiver(socket);
+		mCodecParameters.guard().get() = *codecParameterReceiver.codecParameters();
 		video::network::PacketReceiver packetReceiver(codecParameterReceiver.codecParameters());
 
 		std::unique_ptr<AVFrame, decltype([](auto* ptr) { av_frame_free(&ptr); })> frame(av_frame_alloc());
@@ -174,10 +180,19 @@ namespace screenshare::client {
 	bool VideoPlayer::mouseButtonPress(GdkEventButton* mouseButton) {
 //		mMainBox.grab_focus();
 //		mImageEventBox.grab_focus();
+
+		double width;
+		double height;
+		{
+			auto codecParameters = mCodecParameters.guard();
+			width = codecParameters->width;
+			height = codecParameters->height;
+		}
+
 		mClientActions.guard()->push_back(client::ClientAction::mouseButtonPressed(
 			mouseButton->button,
-			mouseButton->x / 1920.0,
-			mouseButton->y / 1080.0
+			mouseButton->x / width,
+			mouseButton->y / height
 		));
 		return false;
 	}

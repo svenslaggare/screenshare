@@ -22,23 +22,6 @@ namespace screenshare::video {
 		);
 	};
 
-	class VideoReader {
-	private:
-		AVFormatContext* mFormatContext;
-		std::unique_ptr<AVCodecContext, AVCodecContextDeleter> mCodecContext;
-
-		AVCodecParameters* mCodecParameters = nullptr;
-		int mVideoStreamIndex = -1;
-	public:
-		explicit VideoReader(std::string_view filename);
-		~VideoReader();
-
-		AVFormatContext* formatContext();
-		AVCodecContext* codecContext();
-		AVCodecParameters* codecParameters();
-		int videoStreamIndex() const;
-	};
-
 	struct OutputStream {
 		AVStream* stream = nullptr;
 		AVCodec* codec = nullptr;

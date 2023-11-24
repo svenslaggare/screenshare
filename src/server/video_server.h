@@ -33,7 +33,7 @@ namespace screenshare::server {
 
 		misc::ResourceMutex<std::vector<client::ClientAction>> mClientActions;
 
-		bool createFrame(
+		bool nextFrame(
 			video::OutputStream* videoStream,
 			video::Converter& converter,
 			const screeninteractor::GrabbedFrame& grabbedFrame

@@ -16,8 +16,9 @@
 #include <gtkmm/textbuffer.h>
 #include <gtkmm/textview.h>
 #include <gtkmm/eventbox.h>
+#include <gtkmm/scrolledwindow.h>
 
-#include "info_buffer.h"
+#include "info_text_buffer.h"
 #include "actions.h"
 
 #include "../misc/concurrency.hpp"
@@ -34,8 +35,14 @@ namespace screenshare::client {
 		Gtk::Button mConnectButton;
 		Gtk::Button mDisconnectButton;
 
-		InfoBuffer mInfoBuffer;
+		InfoTextBuffer mInfoTextBuffer;
+		std::uint64_t mInfoTextVersion = 0;
+		Gtk::ScrolledWindow mInfoTextScroll;
 		Gtk::TextView mInfoTextView;
+
+		InfoTextBuffer mFrameInfoTextBuffer;
+		std::uint64_t mFrameInfoTextVersion = 0;
+		Gtk::TextView mFrameInfoTextView;
 
 		Gtk::Image mImage;
 		Glib::RefPtr<Gdk::Pixbuf> mPixBuf;

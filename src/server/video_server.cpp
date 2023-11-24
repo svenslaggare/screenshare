@@ -48,7 +48,7 @@ namespace screenshare::server {
 			auto grabbedFrame = screenInteractor->grab();
 //			grabTM.print();
 
-			if (!createFrame(videoStream, converter, grabbedFrame)) {
+			if (!nextFrame(videoStream, converter, grabbedFrame)) {
 				break;
 			}
 
@@ -147,9 +147,9 @@ namespace screenshare::server {
 		);
 	}
 
-	bool VideoServer::createFrame(video::OutputStream* videoStream,
-								  video::Converter& converter,
-								  const screeninteractor::GrabbedFrame& grabbedFrame) {
+	bool VideoServer::nextFrame(video::OutputStream* videoStream,
+								video::Converter& converter,
+								const screeninteractor::GrabbedFrame& grabbedFrame) {
 		if (av_frame_make_writable(videoStream->frame.get()) < 0) {
 			std::cout << "av_frame_make_writable failed" << std::endl;
 			return false;

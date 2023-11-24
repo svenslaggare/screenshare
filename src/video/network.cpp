@@ -93,7 +93,7 @@ namespace screenshare::video::network {
 		boost::asio::async_write(
 			socket,
 			asyncResult->buffers,
-			[asyncResult](const boost::system::error_code& error, size_t /*bytes_transferred*/) {
+			[asyncResult](const boost::system::error_code& error, size_t) {
 				asyncResult->error = error;
 				asyncResult->done = true;
 				asyncResult->done.notify_one();

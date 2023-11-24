@@ -1,6 +1,8 @@
 #include "video_player.h"
 #include "actions.h"
 
+#include <gtkmm/cssprovider.h>
+
 #include <fmt/format.h>
 
 namespace screenshare::client {
@@ -9,11 +11,23 @@ namespace screenshare::client {
 		  mControlPanelBox(Gtk::Orientation::ORIENTATION_HORIZONTAL),
 		  mConnectButton("Connect"),
 		  mDisconnectButton("Disconnect"),
+		  mInfoTextBuffer(30),
+		  mFrameInfoTextBuffer(3),
 		  mImage("assets/wait_for_connection.png"),
 		  mEndpoint(std::move(endpoint)),
 		  mCodecParameters({}),
 		  mClientActions({}) {
 		set_border_width(10);
+
+		auto css = Gtk::CssProvider::create();
+		css->load_from_path("assets/main.css");
+		get_style_context()->add_provider_for_screen(
+			Gdk::Screen::get_default(),
+			css,
+			GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+		);
+
+		constexpr int MARGIN = 10;
 
 		add(mMainBox);
 		mMainBox.show();
@@ -28,22 +42,31 @@ namespace screenshare::client {
 		mImageEventBox.signal_button_press_event().connect(sigc::mem_fun(*this, &VideoPlayer::mouseButtonPress));
 
 		mMainBox.pack_start(mControlPanelBox, true, true, 0);
+		mControlPanelBox.set_margin_top(MARGIN);
 		mControlPanelBox.show();
 
 		mConnectButton.signal_clicked().connect(sigc::mem_fun(*this, &VideoPlayer::connectButtonClicked));
-		mControlPanelBox.pack_start(mConnectButton, true, true, 0);
+		mControlPanelBox.pack_start(mConnectButton, false, false, 0);
+		mConnectButton.set_margin_left(MARGIN);
 		mConnectButton.show();
 
 		mDisconnectButton.signal_clicked().connect(sigc::mem_fun(*this, &VideoPlayer::disconnectButtonClicked));
-		mControlPanelBox.pack_start(mDisconnectButton, true, true, 0);
+		mControlPanelBox.pack_start(mDisconnectButton, false, false, 0);
+		mDisconnectButton.set_margin_left(MARGIN);
 		mDisconnectButton.show();
 
-		mControlPanelBox.pack_start(mInfoTextView, true, true, 0);
+		mInfoTextScroll.add(mInfoTextView);
 		mInfoTextView.show();
 
-		for (int i = 0; i < mInfoBuffer.maxLines(); i++) {
-			addInfoLine("");
-		}
+		mInfoTextScroll.set_size_request(700, 50);
+		mControlPanelBox.pack_start(mInfoTextScroll, false, false, 0);
+		mInfoTextScroll.set_margin_left(MARGIN);
+		mInfoTextScroll.show();
+
+		mControlPanelBox.pack_start(mFrameInfoTextView, false, false, 0);
+		mFrameInfoTextView.set_size_request(350, 50);
+		mFrameInfoTextView.set_margin_left(MARGIN);
+		mFrameInfoTextView.show();
 
 		sigc::slot<bool ()> slot = sigc::bind(sigc::mem_fun(*this, &VideoPlayer::onTimerCallback), 0);
 		mTimerSlot = Glib::signal_timeout().connect(slot, 16);
@@ -104,7 +127,13 @@ namespace screenshare::client {
 				packetReceiver.codecContext(),
 				frame.get(),
 				mPixBuf->get_pixels(),
-				[&](AVCodecContext* codecContext) {}
+				[&](AVCodecContext* codecContext) {
+					mFrameInfoTextBuffer.addLines({
+						fmt::format("DTS: {}", frame->pkt_dts),
+						fmt::format("PTS: {}", frame->coded_picture_number),
+						fmt::format("Packet size: {}", packet->size)
+					});
+				}
 			);
 //			timeMeasurement.changePattern("decodePacket: " + std::to_string(response) + ", time: ");
 //			timeMeasurement.print();
@@ -145,13 +174,31 @@ namespace screenshare::client {
 			mImage.set(mPixBuf);
 		}
 
-		mInfoTextView.set_buffer(mInfoBuffer.gtkBuffer());
+		{
+			std::uint64_t nextVersion = 0;
+			auto buffer = mInfoTextBuffer.gtkBuffer(&nextVersion);
+			if (nextVersion != mInfoTextVersion) {
+				mInfoTextVersion = nextVersion;
+				mInfoTextView.set_buffer(buffer);
 
+				auto adjustment = mInfoTextScroll.get_vadjustment();
+				adjustment->set_value(adjustment->get_upper());
+			}
+		}
+
+		{
+			std::uint64_t nextVersion = 0;
+			auto buffer = mFrameInfoTextBuffer.gtkBuffer(&nextVersion);
+			if (nextVersion != mFrameInfoTextVersion) {
+				mFrameInfoTextVersion = nextVersion;
+				mFrameInfoTextView.set_buffer(buffer);
+			}
+		}
 		return true;
 	}
 
 	void VideoPlayer::addInfoLine(std::string line) {
-		mInfoBuffer.addLine(std::move(line));
+		mInfoTextBuffer.addLine(std::move(line));
 	}
 
 	void VideoPlayer::disconnectButtonClicked() {

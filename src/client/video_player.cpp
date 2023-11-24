@@ -14,7 +14,6 @@ namespace screenshare::client {
 		  mCodecParameters({}),
 		  mClientActions({}) {
 		set_border_width(10);
-		set_size_request(720, 480);
 
 		add(mMainBox);
 		mMainBox.show();
@@ -118,8 +117,7 @@ namespace screenshare::client {
 
 			decltype(mClientActions)::Type clientActions;
 			{
-				auto guard = mClientActions.guard();
-				clientActions = std::move(guard.get());
+				clientActions = std::move(mClientActions.guard().get());
 			}
 
 			for (auto& clientAction : clientActions) {
@@ -194,6 +192,7 @@ namespace screenshare::client {
 			mouseButton->x / width,
 			mouseButton->y / height
 		));
+
 		return false;
 	}
 }

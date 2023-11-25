@@ -27,9 +27,9 @@ namespace screenshare::server {
 		std::atomic<bool> mRun;
 		boost::asio::io_context mIOContext;
 		boost::asio::ip::tcp::acceptor mAcceptor;
-		std::mutex mClientSocketsMutex;
+
 		std::uint64_t mNextClientId = 1;
-		std::unordered_map<ClientId, std::shared_ptr<Socket>> mClientSockets;
+		misc::ResourceMutex<std::unordered_map<ClientId, std::shared_ptr<Socket>>> mClientSockets;
 
 		misc::ResourceMutex<std::vector<client::ClientAction>> mClientActions;
 

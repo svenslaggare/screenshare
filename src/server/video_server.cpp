@@ -8,6 +8,7 @@
 namespace screenshare::server {
 	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind)
 		: mAcceptor(mIOContext, bind),
+		  mClientSockets({}),
 		  mClientActions({}) {
 		std::cout << "Running at " << bind << std::endl;
 	}
@@ -54,8 +55,8 @@ namespace screenshare::server {
 
 			std::vector<std::tuple<ClientId, Socket*>> clientSockets;
 			{
-				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
-				for (auto& [clientId, socket] : mClientSockets) {
+				auto guard = mClientSockets.guard();
+				for (auto& [clientId, socket] : guard.get()) {
 					clientSockets.emplace_back( clientId, socket.get() );
 				}
 			}
@@ -63,11 +64,11 @@ namespace screenshare::server {
 			auto [done, socketErrors] = encodeFrameAndSend(clientSockets, videoStream, packetSender);
 
 			{
-				std::lock_guard<std::mutex> guard(mClientSocketsMutex);
+				auto guard = mClientSockets.guard();
 				for (auto& [clientId, socketError] : socketErrors) {
 					if (socketError) {
 						std::cout << "Removing client #" << clientId << " due to: " << socketError << std::endl;
-						mClientSockets.erase(clientId);
+						guard->erase(clientId);
 					}
 				}
 			}
@@ -110,13 +111,14 @@ namespace screenshare::server {
 					if (auto error = screenshare::video::network::sendAVCodecParameters(*socket, videoStream->encoder.get())) {
 						std::cout << "Failed to send codec parameters due to: " << error << std::endl;
 					} else {
-						std::lock_guard<std::mutex> guard(mClientSocketsMutex);
-						auto clientId = mNextClientId++;
-						std::cout << "Accepted client #" << clientId << ": " << socket->remote_endpoint() << std::endl;
+						{
+							auto guard = mClientSockets.guard();
+							auto clientId = mNextClientId++;
+							std::cout << "Accepted client #" << clientId << ": " << socket->remote_endpoint() << std::endl;
+							guard.get()[clientId] = socket;
+						}
 
 						receiveFromClient(socket, std::make_shared<client::ClientAction>());
-
-						mClientSockets[clientId] = socket;
 					}
 				} else {
 					std::cout << "Failed to accept client due to: " << acceptFailed << std::endl;

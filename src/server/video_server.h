@@ -19,10 +19,18 @@ namespace screenshare::screeninteractor {
 }
 
 namespace screenshare::server {
+	struct VideoStreamingConfig {
+		int width = 0;
+		int height = 0;
+		int frameRate = 0;
+	};
+
 	class VideoServer {
 	private:
 		using Socket = boost::asio::ip::tcp::socket;
 		using ClientId = std::uint64_t;
+
+		VideoStreamingConfig mStreamingConfig;
 
 		std::atomic<bool> mRun;
 		boost::asio::io_context mIOContext;
@@ -52,7 +60,7 @@ namespace screenshare::server {
 			std::shared_ptr<client::ClientAction> clientAction
 		);
 	public:
-		explicit VideoServer(boost::asio::ip::tcp::endpoint bind);
+		explicit VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig config);
 
 		void run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor);
 		void stop();

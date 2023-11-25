@@ -97,7 +97,11 @@ namespace screenshare::client {
 			throw std::runtime_error("Failed to allocate memory for AVPacket");
 		}
 
-		addInfoLine(fmt::format("Stream started {}x{}", codecParameterReceiver.codecParameters()->width, codecParameterReceiver.codecParameters()->height));
+		addInfoLine(fmt::format(
+			"Stream started {}x{}",
+			codecParameterReceiver.codecParameters()->width,
+			codecParameterReceiver.codecParameters()->height
+		));
 
 		video::PacketDecoder packetDecoder;
 		while (!stopToken.stop_requested()) {

@@ -10,7 +10,7 @@
 using namespace screenshare;
 
 void mainServer(const std::string& bind, int windowId) {
-	server::VideoServer videoServer(misc::tcpEndpointFromString(bind));
+	server::VideoServer videoServer(misc::tcpEndpointFromString(bind), { 1920, 1080, 30 });
 	videoServer.run(std::unique_ptr<screeninteractor::ScreenInteractor>(new screeninteractor::ScreenInteractorX11({ ":0", windowId })));
 }
 

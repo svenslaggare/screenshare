@@ -7,7 +7,7 @@ namespace screenshare::video::network {
 		boost::asio::write(
 			socket,
 			std::array {
-				boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&codecParameters), sizeof(AVCodecParameters)),
+				boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&codecParameters), sizeof(codecParameters)),
 				boost::asio::buffer(codecParameters.extradata, codecParameters.extradata_size),
 			},
 			error
@@ -29,7 +29,7 @@ namespace screenshare::video::network {
 		boost::system::error_code error;
 		boost::asio::read(
 			socket,
-			boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&mCodecParameters), sizeof(AVCodecParameters)),
+			boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&mCodecParameters), sizeof(mCodecParameters)),
 			error
 		);
 		if (error) {

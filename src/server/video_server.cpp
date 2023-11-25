@@ -6,8 +6,9 @@
 #include "../misc/rate_sleeper.h"
 
 namespace screenshare::server {
-	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind)
-		: mAcceptor(mIOContext, bind),
+	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig config)
+		: mStreamingConfig(config),
+		  mAcceptor(mIOContext, bind),
 		  mClientSockets({}),
 		  mClientActions({}) {
 		std::cout << "Running at " << bind << std::endl;
@@ -15,7 +16,7 @@ namespace screenshare::server {
 
 	void VideoServer::run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor) {
 		video::VideoEncoder videoEncoder("mp4");
-		auto videoStream = videoEncoder.addVideoStream(1920, 1080, 30);
+		auto videoStream = videoEncoder.addVideoStream(mStreamingConfig.width, mStreamingConfig.height, mStreamingConfig.frameRate);
 		if (!videoStream) {
 			return;
 		}
@@ -34,9 +35,8 @@ namespace screenshare::server {
 			std::cout << "Context done with error: " << error << std::endl;
 		});
 
-		std::cout << "Grabbing: " << screenInteractor->width() << "x" << screenInteractor->height() << std::endl;
-
 		auto streamFrameRate = (double)videoStream->encoder->time_base.den / (double)videoStream->encoder->time_base.num;
+		std::cout << "Grabbing: " << screenInteractor->width() << "x" << screenInteractor->height() << " @ " << streamFrameRate << " FPS" << std::endl;
 
 		video::Converter converter;
 		video::network::PacketSender packetSender;

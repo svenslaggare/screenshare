@@ -89,6 +89,11 @@ namespace screenshare::video {
 		return &mStreams.back();
 	}
 
+	OutputStream::OutputStream(AVCodec* codec, AVStream* stream)
+		: codec(codec), stream(stream) {
+
+	}
+
 	std::optional<OutputStream> createOutputStream(AVFormatContext* outputFormatContext, AVCodecID codecId) {
 		//find the encoder
 		auto codec = avcodec_find_encoder(codecId);
@@ -97,18 +102,17 @@ namespace screenshare::video {
 			return {};
 		}
 
-		OutputStream outputStream;
-		outputStream.codec = codec;
+		auto stream = avformat_new_stream(outputFormatContext, nullptr);
+		if (!stream) {
+			std::cout << "Could not allocate stream" << std::endl;
+			return {};
+		}
+
+		OutputStream outputStream { codec, stream };
 
 		outputStream.packet = decltype(outputStream.packet){ av_packet_alloc() };
 		if (!outputStream.packet) {
 			std::cout << "Could not allocate AVPacket" << std::endl;
-			return {};
-		}
-
-		outputStream.stream = avformat_new_stream(outputFormatContext, nullptr);
-		if (!outputStream.stream) {
-			std::cout << "Could not allocate stream" << std::endl;
 			return {};
 		}
 

@@ -23,8 +23,8 @@ namespace screenshare::video {
 	};
 
 	struct OutputStream {
-		AVStream* stream = nullptr;
 		AVCodec* codec = nullptr;
+		AVStream* stream = nullptr;
 		std::unique_ptr<AVCodecContext, AVCodecContextDeleter> encoder;
 
 		//pts of the next frame that will be generated
@@ -32,6 +32,8 @@ namespace screenshare::video {
 
 		std::unique_ptr<AVFrame, AVFrameDeleter> frame;
 		std::unique_ptr<AVPacket, AVPacketDeleter> packet;
+
+		OutputStream(AVCodec* codec, AVStream* stream);
 	};
 
 	class VideoEncoder {

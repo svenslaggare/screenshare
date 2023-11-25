@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <thread>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/array.hpp>
@@ -49,8 +50,7 @@ namespace screenshare::client {
 		boost::asio::ip::tcp::endpoint mEndpoint;
 		sigc::connection mTimerSlot;
 
-		std::atomic<bool> mRun = false;
-		std::thread mReceiveThread;
+		std::jthread mReceiveThread;
 
 		misc::ResourceMutex<AVCodecParameters> mCodecParameters;
 		misc::ResourceMutex<std::vector<client::ClientAction>> mClientActions;
@@ -64,10 +64,10 @@ namespace screenshare::client {
 
 		bool onTimerCallback(int);
 
-		void runFetchData();
-		void fetchData();
+		void runFetchData(std::stop_token& stopToken);
+		void fetchData(std::stop_token& stopToken);
 	public:
 		explicit VideoPlayer(boost::asio::ip::tcp::endpoint endpoint);
-		~VideoPlayer() override;
+		~VideoPlayer() override = default;
 	};
 }

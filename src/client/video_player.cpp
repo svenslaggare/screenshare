@@ -71,19 +71,12 @@ namespace screenshare::client {
 		sigc::slot<bool ()> slot = sigc::bind(sigc::mem_fun(*this, &VideoPlayer::onTimerCallback), 0);
 		mTimerSlot = Glib::signal_timeout().connect(slot, 16);
 
-		mReceiveThread = std::thread([&]() {
-			runFetchData();
+		mReceiveThread = std::jthread([&](std::stop_token stopToken) {
+			runFetchData(stopToken);
 		});
 	}
 
-	VideoPlayer::~VideoPlayer() {
-		mRun.store(false);
-		if (mReceiveThread.joinable()) {
-			mReceiveThread.join();
-		}
-	}
-
-	void VideoPlayer::fetchData() {
+	void VideoPlayer::fetchData(std::stop_token& stopToken) {
 		boost::asio::io_context ioContext;
 		boost::asio::ip::tcp::resolver resolver(ioContext);
 
@@ -105,10 +98,9 @@ namespace screenshare::client {
 		}
 
 		addInfoLine(fmt::format("Stream started {}x{}", codecParameterReceiver.codecParameters()->width, codecParameterReceiver.codecParameters()->height));
-		mRun.store(true);
 
 		video::PacketDecoder packetDecoder;
-		while (mRun.load()) {
+		while (!stopToken.stop_requested()) {
 			video::network::PacketHeader packetHeader;
 			if (auto error = packetReceiver.receive(socket, packet.get(), packetHeader)) {
 				if (error == boost::asio::error::eof) {
@@ -129,7 +121,6 @@ namespace screenshare::client {
 				);
 			}
 
-//			misc::TimeMeasurement timeMeasurement("");
 			auto response = packetDecoder.decode(
 				packet.get(),
 				packetReceiver.codecContext(),
@@ -146,10 +137,7 @@ namespace screenshare::client {
 					});
 				}
 			);
-//			timeMeasurement.changePattern("decodePacket: " + std::to_string(response) + ", time: ");
-//			timeMeasurement.print();
 
-//			std::cout << std::endl;
 			if (response < 0) {
 				addInfoLine(fmt::format("Failed to decode packet ({})", response));
 				break;
@@ -169,15 +157,13 @@ namespace screenshare::client {
 		}
 	}
 
-	void VideoPlayer::runFetchData() {
+	void VideoPlayer::runFetchData(std::stop_token& stopToken) {
 		try {
-			fetchData();
+			fetchData(stopToken);
 			addInfoLine("Stream ended.");
 		} catch (const std::exception& e) {
 			addInfoLine(fmt::format("Failed to connect due to: {}", e.what()));
 		}
-
-		mRun.store(false);
 	}
 
 	bool VideoPlayer::onTimerCallback(int) {
@@ -212,18 +198,16 @@ namespace screenshare::client {
 	}
 
 	void VideoPlayer::disconnectButtonClicked() {
-		mRun.store(false);
+		mReceiveThread.request_stop();
 	}
 
 	void VideoPlayer::connectButtonClicked() {
-		if (!mRun.load()) {
-			if (mReceiveThread.joinable()) {
-				mReceiveThread.join();
-			}
-
-			mReceiveThread = std::thread([&]() {
-				runFetchData();
+		if (!mReceiveThread.get_stop_token().stop_possible()) {
+			mReceiveThread = std::jthread([&](std::stop_token stopToken) {
+				runFetchData(stopToken);
 			});
+		} else {
+			addInfoLine("Already connected.");
 		}
 	}
 
@@ -233,9 +217,6 @@ namespace screenshare::client {
 	}
 
 	bool VideoPlayer::mouseButtonPress(GdkEventButton* mouseButton) {
-//		mMainBox.grab_focus();
-//		mImageEventBox.grab_focus();
-
 		double width;
 		double height;
 		{

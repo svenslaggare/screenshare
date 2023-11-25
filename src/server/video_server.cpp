@@ -42,9 +42,7 @@ namespace screenshare::server {
 		video::network::PacketSender packetSender;
 		while (mRun.load()) {
 			misc::RateSleeper rateSleeper(streamFrameRate);
-//			misc::TimeMeasurement frameTM("Frame time");
 
-//			std::cout << "Frame PTS: " << videoStream->frame->pts << std::endl;
 //			misc::TimeMeasurement grabTM("Grab time");
 			auto grabbedFrame = screenInteractor->grab();
 //			grabTM.print();
@@ -72,9 +70,6 @@ namespace screenshare::server {
 					}
 				}
 			}
-
-//			frameTM.print();
-//			std::cout << std::endl;
 
 			if (done) {
 				break;
@@ -207,8 +202,9 @@ namespace screenshare::server {
 			packet->stream_index = stream->index;
 
 			std::vector<std::tuple<ClientId, video::network::PacketSender::AsyncResultPtr>> sendResults;
+			video::network::PacketHeader header { videoStream->frame->pts };
 			for (auto& [clientId, socket] : sockets) {
-				sendResults.emplace_back(clientId, packetSender.sendAsync(*socket, packet));
+				sendResults.emplace_back(clientId, packetSender.sendAsync(*socket, header, packet));
 			}
 
 			for (auto [clientId, sendResult] : sendResults) {

@@ -25,4 +25,8 @@ namespace screenshare::misc {
 			mPrinted = true;
 		}
 	}
+
+	double elapsedSeconds(const timespec& x, const timespec& y) {
+		return (double)(x.tv_sec - y.tv_sec) + (double)(x.tv_nsec - y.tv_nsec) / 1.0E9;
+	}
 }

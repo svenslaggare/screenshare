@@ -19,4 +19,6 @@ namespace screenshare::misc {
 		double elapsedMilliseconds() const;
 		void print();
 	};
+
+	double elapsedSeconds(const std::timespec& x, const std::timespec& y);
 }

@@ -50,26 +50,36 @@ namespace screenshare::video::network {
 	}
 
 	namespace {
-		AVPacket serializePacket(AVPacket* packet) {
-			AVPacket packetSerialized;
-			packetSerialized = *packet;
-			packetSerialized.data = nullptr;
-			packetSerialized.buf = nullptr;
-			packetSerialized.side_data = nullptr;
-			packetSerialized.side_data_elems = 0;
+		AVPacketSerialized serializePacket(const PacketHeader& header, AVPacket* packet) {
+			AVPacketSerialized packetSerialized;
+
+			packetSerialized.header = header;
+
+			packetSerialized.packet = *packet;
+			packetSerialized.packet.data = nullptr;
+			packetSerialized.packet.buf = nullptr;
+			packetSerialized.packet.side_data = nullptr;
+			packetSerialized.packet.side_data_elems = 0;
 
 			return packetSerialized;
 		}
 	}
 
-	boost::system::error_code PacketSender::send(boost::asio::ip::tcp::socket& socket, AVPacket* packet) {
+	PacketHeader::PacketHeader(std::int64_t encoderPts)
+		: encoderPts(encoderPts) {
+		std::timespec_get(&sendTime, TIME_UTC);
+	}
+
+	boost::system::error_code PacketSender::send(boost::asio::ip::tcp::socket& socket,
+												 const PacketHeader& header,
+												 AVPacket* packet) {
 		boost::system::error_code error;
 
-		auto packetSerialized = serializePacket(packet);
+		auto packetSerialized = serializePacket(header, packet);
 		boost::asio::write(
 			socket,
 			std::array {
-				boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&packetSerialized), sizeof(AVPacket)),
+				boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&packetSerialized), sizeof(packetSerialized)),
 				boost::asio::buffer(packet->data, packet->size),
 			},
 			error
@@ -78,17 +88,19 @@ namespace screenshare::video::network {
 		return error;
 	}
 
-	PacketSender::AsyncResult::AsyncResult(AVPacket* packet)
-		: packetSerialized(serializePacket(packet)),
+	PacketSender::AsyncResult::AsyncResult(const PacketHeader& header, AVPacket* packet)
+		: packetSerialized(serializePacket(header, packet)),
 		  buffers({
-			  boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&packetSerialized), sizeof(AVPacket)),
+			  boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&packetSerialized), sizeof(packetSerialized)),
 			  boost::asio::buffer(packet->data, packet->size),
 		  }) {
 
 	}
 
-	PacketSender::AsyncResultPtr PacketSender::sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet) {
-		auto asyncResult = std::make_shared<AsyncResult>(packet);
+	PacketSender::AsyncResultPtr PacketSender::sendAsync(boost::asio::ip::tcp::socket& socket,
+														 const PacketHeader& header,
+														 AVPacket* packet) {
+		auto asyncResult = std::make_shared<AsyncResult>(header, packet);
 
 		boost::asio::async_write(
 			socket,
@@ -122,14 +134,15 @@ namespace screenshare::video::network {
 		return mCodecContext.get();
 	}
 
-	boost::system::error_code PacketReceiver::receive(boost::asio::ip::tcp::socket& socket, AVPacket* packet) {
-		AVPacket packetSerialized {};
+	boost::system::error_code PacketReceiver::receive(boost::asio::ip::tcp::socket& socket,
+													  AVPacket* packet,
+													  PacketHeader& header) {
+		AVPacketSerialized packetSerialized;
 		boost::system::error_code error;
 
-//		screenshare::misc::TimeMeasurement receiveTM("receive");
 		boost::asio::read(
 			socket,
-			boost::asio::buffer(reinterpret_cast<uint8_t*>(&packetSerialized), sizeof(AVPacket)),
+			boost::asio::buffer(reinterpret_cast<uint8_t*>(&packetSerialized), sizeof(packetSerialized)),
 			error
 		);
 
@@ -137,22 +150,21 @@ namespace screenshare::video::network {
 			return error;
 		}
 
-//		std::cout << "received pts: " << packetSerialized.pts << std::endl;
-//		std::cout << "packet size: " << packetSerialized.size << std::endl;
-
-		if (packet->buf == nullptr || packetSerialized.size > packet->buf->size) {
-			av_new_packet(packet, packetSerialized.size);
+		if (packet->buf == nullptr || packetSerialized.packet.size > packet->buf->size) {
+			av_new_packet(packet, packetSerialized.packet.size);
 			packet->data = packet->buf->data;
 		}
 
 		boost::asio::read(
 			socket,
-			boost::asio::buffer(packet->data, packetSerialized.size),
+			boost::asio::buffer(packet->data, packetSerialized.packet.size),
 			error
 		);
 
+		header = packetSerialized.header;
+
 		auto buf = packet->buf;
-		*packet = packetSerialized;
+		*packet = packetSerialized.packet;
 		packet->buf = buf;
 		packet->data = packet->buf->data;
 

@@ -24,23 +24,44 @@ namespace screenshare::video::network {
 		AVCodecParameters* codecParameters();
 	};
 
+	struct PacketHeader {
+		std::int64_t encoderPts = 0;
+		std::timespec sendTime {};
+
+		PacketHeader() = default;
+		PacketHeader(std::int64_t encoderPts);
+	};
+
+	struct AVPacketSerialized {
+		PacketHeader header;
+		AVPacket packet = {};
+	};
+
 	class PacketSender {
 	public:
-		boost::system::error_code send(boost::asio::ip::tcp::socket& socket, AVPacket* packet);
+		boost::system::error_code send(
+			boost::asio::ip::tcp::socket& socket,
+			const PacketHeader& header,
+			AVPacket* packet
+		);
 
 		struct AsyncResult {
-			AVPacket packetSerialized {};
+			AVPacketSerialized packetSerialized {};
 			std::array<boost::asio::mutable_buffers_1, 2> buffers;
 
 			boost::system::error_code error;
 			std::atomic<bool> done = false;
 
-			explicit AsyncResult(AVPacket* packet);
+			explicit AsyncResult(const PacketHeader& header, AVPacket* packet);
 		};
 
 		using AsyncResultPtr = std::shared_ptr<AsyncResult>;
 
-		AsyncResultPtr sendAsync(boost::asio::ip::tcp::socket& socket, AVPacket* packet);
+		AsyncResultPtr sendAsync(
+			boost::asio::ip::tcp::socket& socket,
+			const PacketHeader& header,
+			AVPacket* packet
+		);
 	};
 
 	class PacketReceiver {
@@ -51,6 +72,10 @@ namespace screenshare::video::network {
 
 		AVCodecContext* codecContext();
 
-		boost::system::error_code receive(boost::asio::ip::tcp::socket& socket, AVPacket* packet);
+		boost::system::error_code receive(
+			boost::asio::ip::tcp::socket& socket,
+			AVPacket* packet,
+			PacketHeader& header
+		);
 	};
 }

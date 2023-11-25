@@ -109,7 +109,8 @@ namespace screenshare::client {
 
 		video::PacketDecoder packetDecoder;
 		while (mRun.load()) {
-			if (auto error = packetReceiver.receive(socket, packet.get())) {
+			video::network::PacketHeader packetHeader;
+			if (auto error = packetReceiver.receive(socket, packet.get(), packetHeader)) {
 				if (error == boost::asio::error::eof) {
 					addInfoLine("Connection closed by server.");
 					break; // Connection closed cleanly by peer.
@@ -135,10 +136,13 @@ namespace screenshare::client {
 				frame.get(),
 				mPixBuf->get_pixels(),
 				[&](AVCodecContext* codecContext) {
+					std::timespec currentTime {};
+					std::timespec_get(&currentTime, TIME_UTC);
+
 					mFrameInfoTextBuffer.addLines({
-						fmt::format("DTS: {}", frame->pkt_dts),
-						fmt::format("PTS: {}", frame->coded_picture_number),
-						fmt::format("Packet size: {}", packet->size)
+						fmt::format("PTS: {} (delay: {})", frame->pts, packetHeader.encoderPts - frame->pts),
+						fmt::format("Frame number: {}", frame->coded_picture_number),
+						fmt::format("Time since packet sent {:.2f} ms", misc::elapsedSeconds(currentTime, packetHeader.sendTime) * 1000.0)
 					});
 				}
 			);

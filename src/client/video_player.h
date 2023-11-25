@@ -70,6 +70,6 @@ namespace screenshare::client {
 		void fetchData();
 	public:
 		explicit VideoPlayer(boost::asio::ip::tcp::endpoint endpoint);
-		virtual ~VideoPlayer() = default;
+		~VideoPlayer() override;
 	};
 }

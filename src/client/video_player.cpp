@@ -76,6 +76,13 @@ namespace screenshare::client {
 		});
 	}
 
+	VideoPlayer::~VideoPlayer() {
+		mRun.store(false);
+		if (mReceiveThread.joinable()) {
+			mReceiveThread.join();
+		}
+	}
+
 	void VideoPlayer::fetchData() {
 		boost::asio::io_context ioContext;
 		boost::asio::ip::tcp::resolver resolver(ioContext);

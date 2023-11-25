@@ -40,7 +40,7 @@ namespace screenshare::server {
 
 		video::Converter converter;
 		video::network::PacketSender packetSender;
-		while (true) {
+		while (mRun.load()) {
 			misc::RateSleeper rateSleeper(streamFrameRate);
 //			misc::TimeMeasurement frameTM("Frame time");
 
@@ -101,6 +101,10 @@ namespace screenshare::server {
 		}
 	}
 
+	void VideoServer::stop() {
+		mRun.store(false);
+	}
+
 	void VideoServer::accept(video::OutputStream* videoStream) {
 		auto socket = std::make_shared<Socket>(mIOContext);
 
@@ -137,7 +141,7 @@ namespace screenshare::server {
 			std::move(clientAction),
 			[this, socket](boost::system::error_code error, std::shared_ptr<client::ClientAction> clientAction) {
 				if (!error) {
-					std::cout << clientAction->toString() << std::endl;
+					std::cout << "Got client action: " << clientAction->toString() << std::endl;
 
 					{
 						mClientActions.guard()->push_back(*clientAction);

@@ -55,5 +55,6 @@ namespace screenshare::server {
 		explicit VideoServer(boost::asio::ip::tcp::endpoint bind);
 
 		void run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor);
+		void stop();
 	};
 }

@@ -158,12 +158,16 @@ namespace screenshare::client {
 	}
 
 	void VideoPlayer::runFetchData(std::stop_token& stopToken) {
+		mIsConnected.store(true);
+
 		try {
 			fetchData(stopToken);
 			addInfoLine("Stream ended.");
 		} catch (const std::exception& e) {
 			addInfoLine(fmt::format("Failed to connect due to: {}", e.what()));
 		}
+
+		mIsConnected.store(false);
 	}
 
 	bool VideoPlayer::onTimerCallback(int) {
@@ -171,23 +175,15 @@ namespace screenshare::client {
 			mImage.set(mPixBuf);
 		}
 
-		{
-			bool changed = false;
-			auto buffer = mInfoTextBuffer.gtkBuffer(changed);
-			if (changed) {
-				mInfoTextView.set_buffer(buffer);
+		if (auto buffer = mInfoTextBuffer.gtkBufferIfUnchanged()) {
+			mInfoTextView.set_buffer(buffer);
 
-				auto adjustment = mInfoTextScroll.get_vadjustment();
-				adjustment->set_value(adjustment->get_upper());
-			}
+			auto adjustment = mInfoTextScroll.get_vadjustment();
+			adjustment->set_value(adjustment->get_upper());
 		}
 
-		{
-			bool changed = false;
-			auto buffer = mFrameInfoTextBuffer.gtkBuffer(changed);
-			if (changed) {
-				mFrameInfoTextView.set_buffer(buffer);
-			}
+		if (auto buffer = mFrameInfoTextBuffer.gtkBufferIfUnchanged()) {
+			mFrameInfoTextView.set_buffer(buffer);
 		}
 
 		return true;
@@ -202,7 +198,7 @@ namespace screenshare::client {
 	}
 
 	void VideoPlayer::connectButtonClicked() {
-		if (!mReceiveThread.get_stop_token().stop_possible()) {
+		if (!mIsConnected.load()) {
 			mReceiveThread = std::jthread([&](std::stop_token stopToken) {
 				runFetchData(stopToken);
 			});

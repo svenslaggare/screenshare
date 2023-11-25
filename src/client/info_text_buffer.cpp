@@ -37,6 +37,16 @@ namespace screenshare::client {
 		return mGtkBuffer;
 	}
 
+	Glib::RefPtr<Gtk::TextBuffer> InfoTextBuffer::gtkBufferIfUnchanged() {
+		bool changed = false;
+		auto buffer = gtkBuffer(changed);
+		if (changed) {
+			return buffer;
+		} else {
+			return {};
+		}
+	}
+
 	void InfoTextBuffer::addLine(std::string newLine) {
 		std::lock_guard<std::mutex> guard(mMutex);
 

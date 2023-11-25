@@ -50,6 +50,7 @@ namespace screenshare::client {
 		boost::asio::ip::tcp::endpoint mEndpoint;
 		sigc::connection mTimerSlot;
 
+		std::atomic<bool> mIsConnected;
 		std::jthread mReceiveThread;
 
 		misc::ResourceMutex<AVCodecParameters> mCodecParameters;

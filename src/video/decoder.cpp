@@ -9,7 +9,7 @@ namespace screenshare::video {
 			std::cout
 				<< "Frame " << codecContext->frame_number
 				<< " (type=" << av_get_picture_type_char(frame->pict_type)
-				<< ", size=" << frame->pkt_size << " bytes, format=" << frame->format << ") pts " << frame->pts << " key_frame " << frame->key_frame << " [DTS " << frame->coded_picture_number << "]"
+				<< ", size=" << frame->pkt_size << " bytes, format=" << frame->format << ") pts " << frame->pts << " key_frame " << frame->key_frame << " frame number: " << frame->coded_picture_number << "]"
 				<< std::endl;
 		}
 	}
@@ -32,7 +32,7 @@ namespace screenshare::video {
 				return response;
 			}
 
-			printDecodedFrame(codecContext, frame);
+//			printDecodedFrame(codecContext, frame);
 
 			if (!mRGBFrame) {
 				mRGBFrame = decltype(mRGBFrame) { av_frame_alloc() };

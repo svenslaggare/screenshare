@@ -6,8 +6,8 @@
 #include "../misc/rate_sleeper.h"
 
 namespace screenshare::server {
-	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig config)
-		: mStreamingConfig(config),
+	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig streamingConfig)
+		: mStreamingConfig(streamingConfig),
 		  mAcceptor(mIOContext, bind),
 		  mClientSockets({}),
 		  mClientActions({}) {

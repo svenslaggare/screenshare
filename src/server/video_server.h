@@ -60,7 +60,7 @@ namespace screenshare::server {
 			std::shared_ptr<client::ClientAction> clientAction
 		);
 	public:
-		explicit VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig config);
+		explicit VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig streamingConfig);
 
 		void run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor);
 		void stop();

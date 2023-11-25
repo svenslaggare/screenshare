@@ -57,7 +57,7 @@ namespace screenshare::server {
 			{
 				auto guard = mClientSockets.guard();
 				for (auto& [clientId, socket] : guard.get()) {
-					clientSockets.emplace_back( clientId, socket.get() );
+					clientSockets.emplace_back(clientId, socket.get());
 				}
 			}
 

@@ -10,7 +10,7 @@ namespace screenshare::client {
 		return mMaxLines;
 	}
 
-	Glib::RefPtr<Gtk::TextBuffer> InfoTextBuffer::gtkBuffer(std::uint64_t* version) {
+	Glib::RefPtr<Gtk::TextBuffer> InfoTextBuffer::gtkBuffer(bool& changed) {
 		std::lock_guard<std::mutex> guard(mMutex);
 
 		if (mGtkBufferVersion != mVersion) {
@@ -28,10 +28,10 @@ namespace screenshare::client {
 
 			mGtkBuffer->set_text(stream.str());
 			mGtkBufferVersion = mVersion;
-		}
 
-		if (version != nullptr) {
-			*version = mVersion;
+			changed = true;
+		} else {
+			changed = false;
 		}
 
 		return mGtkBuffer;

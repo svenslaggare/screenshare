@@ -36,12 +36,10 @@ namespace screenshare::client {
 		Gtk::Button mDisconnectButton;
 
 		InfoTextBuffer mInfoTextBuffer;
-		std::uint64_t mInfoTextVersion = 0;
 		Gtk::ScrolledWindow mInfoTextScroll;
 		Gtk::TextView mInfoTextView;
 
 		InfoTextBuffer mFrameInfoTextBuffer;
-		std::uint64_t mFrameInfoTextVersion = 0;
 		Gtk::TextView mFrameInfoTextView;
 
 		Gtk::Image mImage;

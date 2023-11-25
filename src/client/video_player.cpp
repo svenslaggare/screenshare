@@ -182,10 +182,9 @@ namespace screenshare::client {
 		}
 
 		{
-			std::uint64_t nextVersion = 0;
-			auto buffer = mInfoTextBuffer.gtkBuffer(&nextVersion);
-			if (nextVersion != mInfoTextVersion) {
-				mInfoTextVersion = nextVersion;
+			bool changed = false;
+			auto buffer = mInfoTextBuffer.gtkBuffer(changed);
+			if (changed) {
 				mInfoTextView.set_buffer(buffer);
 
 				auto adjustment = mInfoTextScroll.get_vadjustment();
@@ -194,13 +193,13 @@ namespace screenshare::client {
 		}
 
 		{
-			std::uint64_t nextVersion = 0;
-			auto buffer = mFrameInfoTextBuffer.gtkBuffer(&nextVersion);
-			if (nextVersion != mFrameInfoTextVersion) {
-				mFrameInfoTextVersion = nextVersion;
+			bool changed = false;
+			auto buffer = mFrameInfoTextBuffer.gtkBuffer(changed);
+			if (changed) {
 				mFrameInfoTextView.set_buffer(buffer);
 			}
 		}
+
 		return true;
 	}
 

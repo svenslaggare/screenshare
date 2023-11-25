@@ -218,13 +218,10 @@ namespace screenshare::client {
 	}
 
 	bool VideoPlayer::mouseButtonPress(GdkEventButton* mouseButton) {
-		double width;
-		double height;
-		{
+		auto [width, height] = [&]() {
 			auto codecParameters = mCodecParameters.guard();
-			width = codecParameters->width;
-			height = codecParameters->height;
-		}
+			return std::make_tuple(codecParameters->width, codecParameters->height);
+		}();
 
 		mClientActions.guard()->push_back(client::ClientAction::mouseButtonPressed(
 			mouseButton->button,

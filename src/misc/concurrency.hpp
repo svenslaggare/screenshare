@@ -4,8 +4,8 @@
 
 namespace screenshare::misc {
 	/**
- * Represents a lock guard around a resource
- */
+	 * Represents a lock guard around a resource
+	 */
 	template<typename T>
 	class ResourceLockGuard {
 	private:

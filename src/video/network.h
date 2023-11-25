@@ -11,17 +11,23 @@
 #include "../misc/time_measurement.h"
 
 namespace screenshare::video::network {
-	boost::system::error_code sendAVCodecParameters(boost::asio::ip::tcp::socket& socket, AVCodecParameters& codecParameters);
+	struct CustomCodecParameters {
+		AVRational timeBase { 0, 0 };
+	};
+
 	boost::system::error_code sendAVCodecParameters(boost::asio::ip::tcp::socket& socket, AVCodecContext* codecContext);
 
 	class AVCodecParametersReceiver {
 	private:
+		CustomCodecParameters mCustomCodecParameters;
 		AVCodecParameters mCodecParameters {};
 		std::unique_ptr<std::uint8_t[]> mCodecExtraData;
 	public:
 		explicit AVCodecParametersReceiver(boost::asio::ip::tcp::socket& socket);
 
 		AVCodecParameters* codecParameters();
+
+		AVRational timeBase() const;
 	};
 
 	struct PacketHeader {
@@ -29,7 +35,7 @@ namespace screenshare::video::network {
 		std::timespec sendTime {};
 
 		PacketHeader() = default;
-		PacketHeader(std::int64_t encoderPts);
+		explicit PacketHeader(std::int64_t encoderPts);
 	};
 
 	struct AVPacketSerialized {

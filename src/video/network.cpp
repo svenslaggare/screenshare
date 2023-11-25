@@ -2,11 +2,20 @@
 #include "network.h"
 
 namespace screenshare::video::network {
-	boost::system::error_code sendAVCodecParameters(boost::asio::ip::tcp::socket& socket, AVCodecParameters& codecParameters) {
+	boost::system::error_code sendAVCodecParameters(boost::asio::ip::tcp::socket& socket, AVCodecContext* codecContext) {
+		CustomCodecParameters customCodecParameters;
+		customCodecParameters.timeBase = codecContext->time_base;
+
+		AVCodecParameters codecParameters {};
+		if (avcodec_parameters_from_context(&codecParameters, codecContext) < 0) {
+			throw std::runtime_error("Failed to get codec parameters.");
+		}
+
 		boost::system::error_code error;
 		boost::asio::write(
 			socket,
 			std::array {
+				boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&customCodecParameters), sizeof(customCodecParameters)),
 				boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&codecParameters), sizeof(codecParameters)),
 				boost::asio::buffer(codecParameters.extradata, codecParameters.extradata_size),
 			},
@@ -16,17 +25,17 @@ namespace screenshare::video::network {
 		return error;
 	}
 
-	boost::system::error_code sendAVCodecParameters(boost::asio::ip::tcp::socket& socket, AVCodecContext* codecContext) {
-		AVCodecParameters codecParameters {};
-		if (avcodec_parameters_from_context(&codecParameters, codecContext) < 0) {
-			throw std::runtime_error("Failed to get codec parameters.");
-		}
-
-		return sendAVCodecParameters(socket, codecParameters);
-	}
-
 	AVCodecParametersReceiver::AVCodecParametersReceiver(boost::asio::ip::tcp::socket& socket) {
 		boost::system::error_code error;
+		boost::asio::read(
+			socket,
+			boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&mCustomCodecParameters), sizeof(mCustomCodecParameters)),
+			error
+		);
+		if (error) {
+			throw std::runtime_error("Failed to retrieve codec parameters.");
+		}
+
 		boost::asio::read(
 			socket,
 			boost::asio::buffer(reinterpret_cast<std::uint8_t*>(&mCodecParameters), sizeof(mCodecParameters)),
@@ -42,11 +51,19 @@ namespace screenshare::video::network {
 			boost::asio::buffer(reinterpret_cast<std::uint8_t*>(mCodecExtraData.get()), mCodecParameters.extradata_size),
 			error
 		);
+		if (error) {
+			throw std::runtime_error("Failed to retrieve codec parameters.");
+		}
+
 		mCodecParameters.extradata = mCodecExtraData.get();
 	}
 
 	AVCodecParameters* AVCodecParametersReceiver::codecParameters() {
 		return &mCodecParameters;
+	}
+
+	AVRational AVCodecParametersReceiver::timeBase() const {
+		return mCustomCodecParameters.timeBase;
 	}
 
 	namespace {

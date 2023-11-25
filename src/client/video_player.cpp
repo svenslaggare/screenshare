@@ -98,9 +98,10 @@ namespace screenshare::client {
 		}
 
 		addInfoLine(fmt::format(
-			"Stream started {}x{}",
+			"Stream started {}x{} @ {} FPS",
 			codecParameterReceiver.codecParameters()->width,
-			codecParameterReceiver.codecParameters()->height
+			codecParameterReceiver.codecParameters()->height,
+			(double)codecParameterReceiver.timeBase().den / (double)codecParameterReceiver.timeBase().num
 		));
 
 		video::PacketDecoder packetDecoder;
@@ -109,9 +110,9 @@ namespace screenshare::client {
 			if (auto error = packetReceiver.receive(socket, packet.get(), packetHeader)) {
 				if (error == boost::asio::error::eof) {
 					addInfoLine("Connection closed by server.");
-					break; // Connection closed cleanly by peer.
+					break;
 				} else if (error) {
-					throw boost::system::system_error(error); // Some other error.
+					throw boost::system::system_error(error);
 				}
 			}
 

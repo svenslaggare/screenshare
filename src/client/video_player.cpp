@@ -7,14 +7,14 @@
 
 namespace screenshare::client {
 	VideoPlayer::VideoPlayer(boost::asio::ip::tcp::endpoint endpoint)
-		: mMainBox(Gtk::Orientation::ORIENTATION_VERTICAL),
+		: mEndpoint(std::move(endpoint)),
+		  mMainBox(Gtk::Orientation::ORIENTATION_VERTICAL),
 		  mControlPanelBox(Gtk::Orientation::ORIENTATION_HORIZONTAL),
 		  mConnectButton("Connect"),
 		  mDisconnectButton("Disconnect"),
 		  mInfoTextBuffer(30),
 		  mFrameInfoTextBuffer(3),
 		  mImage("assets/wait_for_connection.png"),
-		  mEndpoint(std::move(endpoint)),
 		  mCodecParameters({}),
 		  mClientActions({}) {
 		set_border_width(10);

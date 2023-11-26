@@ -30,6 +30,8 @@
 namespace screenshare::client {
 	class VideoPlayer : public Gtk::Window {
 	private:
+		boost::asio::ip::tcp::endpoint mEndpoint;
+
 		Gtk::Box mMainBox;
 		Gtk::Box mControlPanelBox;
 
@@ -47,7 +49,6 @@ namespace screenshare::client {
 		Glib::RefPtr<Gdk::Pixbuf> mPixBuf;
 		Gtk::EventBox mImageEventBox;
 
-		boost::asio::ip::tcp::endpoint mEndpoint;
 		sigc::connection mTimerSlot;
 
 		std::atomic<bool> mIsConnected;

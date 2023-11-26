@@ -1,4 +1,6 @@
 #pragma once
+#include <thread>
+
 #include <boost/asio.hpp>
 
 #include "../screeninteractor//common.h"
@@ -27,8 +29,8 @@ namespace screenshare::server {
 
 		video::VideoEncoderConfig mVideoEncoderConfig;
 
-		std::atomic<bool> mRun;
 		boost::asio::io_context mIOContext;
+		std::jthread mIOContextThread;
 		boost::asio::ip::tcp::acceptor mAcceptor;
 
 		std::uint64_t mNextClientId = 1;

@@ -18,17 +18,15 @@ namespace screenshare::server {
 		video::VideoEncoder videoEncoder("mp4");
 		auto videoStream = videoEncoder.addVideoStream(mVideoEncoderConfig);
 		if (!videoStream) {
-			return;
+			throw std::runtime_error("Failed to create video stream.");
 		}
-
-		mRun.store(true);
 
 		accept(videoStream);
 
-		auto contextThread = std::thread([&]() {
+		mIOContextThread = std::jthread([&](std::stop_token stopToken) {
 			boost::system::error_code error;
 
-			while (!error.failed() && mRun.load()) {
+			while (!error.failed() && !stopToken.stop_requested()) {
 				mIOContext.run(error);
 			}
 
@@ -40,7 +38,7 @@ namespace screenshare::server {
 
 		video::Converter converter;
 		video::network::PacketSender packetSender;
-		while (mRun.load()) {
+		while (!mIOContextThread.get_stop_token().stop_requested()) {
 			misc::RateSleeper rateSleeper(streamFrameRate);
 
 //			misc::TimeMeasurement grabTM("Grab time");
@@ -88,16 +86,16 @@ namespace screenshare::server {
 
 		std::cout << "Done encoding." << std::endl;
 
-		mRun.store(false);
+		mIOContextThread.request_stop();
 		mIOContext.stop();
 
-		if (contextThread.joinable()) {
-			contextThread.join();
+		if (mIOContextThread.joinable()) {
+			mIOContextThread.join();
 		}
 	}
 
 	void VideoServer::stop() {
-		mRun.store(false);
+		mIOContextThread.request_stop();
 	}
 
 	void VideoServer::accept(video::OutputStream* videoStream) {

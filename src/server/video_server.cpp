@@ -7,21 +7,20 @@
 
 namespace screenshare::server {
 	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind, video::VideoEncoderConfig videoEncoderConfig)
-		: mVideoEncoderConfig(videoEncoderConfig),
+		: mVideoEncoder("mp4"),
 		  mAcceptor(mIOContext, bind),
 		  mClientSockets({}),
 		  mClientActions({}) {
 		std::cout << "Running at " << bind << std::endl;
+
+		mVideoStream = mVideoEncoder.addVideoStream(videoEncoderConfig);
+		if (!mVideoStream) {
+			throw std::runtime_error("Failed to create video stream.");
+		}
 	}
 
 	void VideoServer::run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor) {
-		video::VideoEncoder videoEncoder("mp4");
-		auto videoStream = videoEncoder.addVideoStream(mVideoEncoderConfig);
-		if (!videoStream) {
-			throw std::runtime_error("Failed to create video stream.");
-		}
-
-		accept(videoStream);
+		accept(mVideoStream);
 
 		mIOContextThread = std::jthread([&](std::stop_token stopToken) {
 			boost::system::error_code error;
@@ -33,7 +32,7 @@ namespace screenshare::server {
 			std::cout << "Context done with error: " << error << std::endl;
 		});
 
-		auto streamFrameRate = (double)videoStream->encoder->time_base.den / (double)videoStream->encoder->time_base.num;
+		auto streamFrameRate = (double)mVideoStream->encoder->time_base.den / (double)mVideoStream->encoder->time_base.num;
 		std::cout << "Grabbing: " << screenInteractor->width() << "x" << screenInteractor->height() << " @ " << streamFrameRate << " FPS" << std::endl;
 
 		video::Converter converter;
@@ -45,7 +44,7 @@ namespace screenshare::server {
 			auto grabbedFrame = screenInteractor->grab();
 //			grabTM.print();
 
-			if (!nextFrame(videoStream, converter, grabbedFrame)) {
+			if (!nextFrame(mVideoStream, converter, grabbedFrame)) {
 				break;
 			}
 
@@ -57,7 +56,7 @@ namespace screenshare::server {
 				}
 			}
 
-			auto [done, socketErrors] = encodeFrameAndSend(clientSockets, videoStream, packetSender);
+			auto [done, socketErrors] = encodeFrameAndSend(clientSockets, mVideoStream, packetSender);
 
 			{
 				auto guard = mClientSockets.guard();

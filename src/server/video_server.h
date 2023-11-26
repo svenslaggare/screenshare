@@ -27,7 +27,8 @@ namespace screenshare::server {
 		using Socket = boost::asio::ip::tcp::socket;
 		using ClientId = std::uint64_t;
 
-		video::VideoEncoderConfig mVideoEncoderConfig;
+		video::VideoEncoder mVideoEncoder;
+		video::OutputStream* mVideoStream;
 
 		boost::asio::io_context mIOContext;
 		std::jthread mIOContextThread;

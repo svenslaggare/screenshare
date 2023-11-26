@@ -12,16 +12,8 @@
 namespace screenshare::video {
 	class PacketDecoder {
 	private:
-		std::unique_ptr<AVFrame, AVFrameWithDataDeleter> mRGBFrame;
 		std::unique_ptr<SwsContext, SwsContextDeleter> mConversion;
 	public:
-		int decode(
-			AVPacket* packet,
-			AVCodecContext* codecContext,
-			AVFrame* frame,
-			std::function<void (AVCodecContext* codecContext, AVFrame* frame)> callback
-		);
-
 		int decode(
 			AVPacket* packet,
 			AVCodecContext* codecContext,

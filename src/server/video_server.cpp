@@ -6,20 +6,33 @@
 #include "../misc/rate_sleeper.h"
 
 namespace screenshare::server {
+	namespace {
+		template<typename T>
+		T alignValue(T value, T alignment) {
+			return (value / alignment) * alignment;
+		}
+	}
+
 	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind, video::VideoEncoderConfig videoEncoderConfig)
 		: mVideoEncoder("mp4"),
+		  mVideoEncoderConfig(videoEncoderConfig),
 		  mAcceptor(mIOContext, bind),
 		  mClientSockets({}),
 		  mClientActions({}) {
 		std::cout << "Running at " << bind << std::endl;
-
-		mVideoStream = mVideoEncoder.addVideoStream(videoEncoderConfig);
-		if (!mVideoStream) {
-			throw std::runtime_error("Failed to create video stream.");
-		}
 	}
 
 	void VideoServer::run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor) {
+		if (mVideoEncoderConfig.width > screenInteractor->width() || mVideoEncoderConfig.height > screenInteractor->height()) {
+			mVideoEncoderConfig.width = alignValue(screenInteractor->width(), 2);
+			mVideoEncoderConfig.height = alignValue(screenInteractor->height(), 2);
+		}
+
+		mVideoStream = mVideoEncoder.addVideoStream(mVideoEncoderConfig);
+		if (!mVideoStream) {
+			throw std::runtime_error("Failed to create video stream.");
+		}
+
 		accept(mVideoStream);
 
 		mIOContextThread = std::jthread([&](std::stop_token stopToken) {
@@ -40,11 +53,13 @@ namespace screenshare::server {
 		while (!mIOContextThread.get_stop_token().stop_requested()) {
 			misc::RateSleeper rateSleeper(streamFrameRate);
 
-//			misc::TimeMeasurement grabTM("Grab time");
 			auto grabbedFrame = screenInteractor->grab();
-//			grabTM.print();
+			if (!grabbedFrame) {
+				std::cout << "Failed to grab frame." << std::endl;
+				break;
+			}
 
-			if (!nextFrame(mVideoStream, converter, grabbedFrame)) {
+			if (!nextFrame(mVideoStream, converter, *grabbedFrame)) {
 				break;
 			}
 
@@ -153,7 +168,6 @@ namespace screenshare::server {
 			return false;
 		}
 
-//		misc::TimeMeasurement timeMeasurement("Convert time");
 		auto convertResult = converter.convert(
 			grabbedFrame.width, grabbedFrame.height, grabbedFrame.format,
 			grabbedFrame.data, grabbedFrame.lineSize,

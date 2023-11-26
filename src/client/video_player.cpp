@@ -32,16 +32,20 @@ namespace screenshare::client {
 		add(mMainBox);
 		mMainBox.show();
 
+		mImage.set_valign(Gtk::Align::ALIGN_START);
+		mImage.set_halign(Gtk::Align::ALIGN_START);
+
 		mImageEventBox.add(mImage);
+		mImageEventBox.set_size_request(1920, 1080);
 		mImage.show();
 
-		mMainBox.pack_start(mImageEventBox, true, true, 0);
+		mMainBox.pack_start(mImageEventBox, false, false, 0);
 		mImageEventBox.show();
 
 		mMainBox.signal_key_press_event().connect(sigc::mem_fun(*this, &VideoPlayer::keyPress));
 		mImageEventBox.signal_button_press_event().connect(sigc::mem_fun(*this, &VideoPlayer::mouseButtonPress));
 
-		mMainBox.pack_start(mControlPanelBox, true, true, 0);
+		mMainBox.pack_start(mControlPanelBox, false, true, 0);
 		mControlPanelBox.set_margin_top(MARGIN);
 		mControlPanelBox.show();
 

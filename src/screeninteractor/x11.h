@@ -35,7 +35,7 @@ namespace screenshare::screeninteractor {
 		int width() const override;
 		int height() const override;
 
-		GrabbedFrame grab() override;
+		std::optional<GrabbedFrame> grab() override;
 		virtual bool handleClientAction(const client::ClientAction& clientAction) override;
 	};
 }

@@ -41,7 +41,7 @@ namespace screenshare::screeninteractor {
 		XShmAttach(mDisplay, &mX11SharedMemory);
 
 		XSetErrorHandler([](Display * d, XErrorEvent * e) {
-			std::cerr << "Error code: " << e->error_code << std::endl;
+			std::cerr << "Error code: " << (int)e->error_code << std::endl;
 			return 0;
 		});
 	}
@@ -60,15 +60,18 @@ namespace screenshare::screeninteractor {
 		return mHeight;
 	}
 
-	GrabbedFrame ScreenInteractorX11::grab() {
-		XShmGetImage(mDisplay, mWindowId, mImage, 0, 0, AllPlanes);
-		return {
+	std::optional<GrabbedFrame> ScreenInteractorX11::grab() {
+		if (XShmGetImage(mDisplay, mWindowId, mImage, 0, 0, AllPlanes) <= 0) {
+			return {};
+		}
+
+		return {{
 			mImage->width,
 			mImage->height,
 			AVPixelFormat::AV_PIX_FMT_BGRA,
 			(std::uint8_t*)mImage->data,
 			mImage->width * 4
-		};
+		}};
 	}
 
 	bool ScreenInteractorX11::handleClientAction(const client::ClientAction& clientAction) {

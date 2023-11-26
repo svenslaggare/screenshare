@@ -1,4 +1,6 @@
 #pragma once
+#include <optional>
+
 #include "../video/common.h"
 
 namespace screenshare::client {
@@ -21,7 +23,7 @@ namespace screenshare::screeninteractor {
 		virtual int width() const = 0;
 		virtual int height() const = 0;
 
-		virtual GrabbedFrame grab() = 0;
+		virtual std::optional<GrabbedFrame> grab() = 0;
 	};
 
 	class ClientActionHandler {

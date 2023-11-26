@@ -55,46 +55,7 @@ namespace screenshare::video {
 		) >= 0;
 	}
 
-	VideoEncoder::VideoEncoder(const std::string& format) {
-		AVFormatContext* outputFormatContextPtr;
-		avformat_alloc_output_context2(&outputFormatContextPtr, nullptr, format.c_str(), nullptr);
-		if (!outputFormatContextPtr) {
-			throw std::runtime_error("Failed to create output format context.");
-		}
-
-		mOutputFormatContext = decltype(mOutputFormatContext) { outputFormatContextPtr };
-	}
-
-	AVFormatContext* VideoEncoder::outputFormatContext() {
-		return mOutputFormatContext.get();
-	}
-
-	const std::vector<OutputStream>& VideoEncoder::streams() const {
-		return mStreams;
-	}
-
-	OutputStream* VideoEncoder::addVideoStream(int width, int height, int frameRate, AVDictionary* options) {
-		auto outputFormat = mOutputFormatContext->oformat;
-
-		auto videoStream = createVideoStream(
-			mOutputFormatContext.get(),
-			outputFormat->video_codec,
-			width, height, frameRate, options
-		);
-		if (!videoStream) {
-			return nullptr;
-		}
-
-		mStreams.push_back(std::move(*videoStream));
-		return &mStreams.back();
-	}
-
-	OutputStream::OutputStream(AVCodec* codec, AVStream* stream)
-		: codec(codec), stream(stream) {
-
-	}
-
-	std::optional<OutputStream> createOutputStream(AVFormatContext* outputFormatContext, AVCodecID codecId) {
+	std::optional<OutputStream> OutputStream::create(AVFormatContext* outputFormatContext, AVCodecID codecId) {
 		//find the encoder
 		auto codec = avcodec_find_encoder(codecId);
 		if (!codec) {
@@ -126,9 +87,48 @@ namespace screenshare::video {
 		return { std::move(outputStream) };
 	}
 
+	VideoEncoder::VideoEncoder(const std::string& format) {
+		AVFormatContext* outputFormatContextPtr;
+		avformat_alloc_output_context2(&outputFormatContextPtr, nullptr, format.c_str(), nullptr);
+		if (!outputFormatContextPtr) {
+			throw std::runtime_error("Failed to create output format context.");
+		}
+
+		mOutputFormatContext = decltype(mOutputFormatContext) { outputFormatContextPtr };
+	}
+
+	AVFormatContext* VideoEncoder::outputFormatContext() {
+		return mOutputFormatContext.get();
+	}
+
+	const std::vector<OutputStream>& VideoEncoder::streams() const {
+		return mStreams;
+	}
+
+	OutputStream* VideoEncoder::addVideoStream(const VideoEncoderConfig& config, AVDictionary* options) {
+		auto outputFormat = mOutputFormatContext->oformat;
+
+		auto videoStream = createVideoStream(
+			mOutputFormatContext.get(),
+			outputFormat->video_codec,
+			config, options
+		);
+		if (!videoStream) {
+			return nullptr;
+		}
+
+		mStreams.push_back(std::move(*videoStream));
+		return &mStreams.back();
+	}
+
+	OutputStream::OutputStream(AVCodec* codec, AVStream* stream)
+		: codec(codec), stream(stream) {
+
+	}
+
 	std::optional<OutputStream> createVideoStream(AVFormatContext* outputFormatContext, AVCodecID codecId,
-												  int width, int height, int frameRate, AVDictionary* options) {
-		auto outputStream = createOutputStream(outputFormatContext, codecId);
+												  const VideoEncoderConfig& config, AVDictionary* options) {
+		auto outputStream = OutputStream::create(outputFormatContext, codecId);
 		if (!outputStream) {
 			return {};
 		}
@@ -137,13 +137,13 @@ namespace screenshare::video {
 			case AVMEDIA_TYPE_VIDEO:
 				outputStream->encoder->codec_id = codecId;
 
-				outputStream->encoder->bit_rate = (width * height) * 2;
+				outputStream->encoder->bit_rate = (config.width * config.height) * 2;
 
 				//Resolution must be a multiple of two.
-				outputStream->encoder->width = width;
-				outputStream->encoder->height = height;
+				outputStream->encoder->width = config.width;
+				outputStream->encoder->height = config.height;
 
-				outputStream->stream->time_base = (AVRational){ 1, frameRate };
+				outputStream->stream->time_base = (AVRational){ 1, config.frameRate };
 				outputStream->encoder->time_base = outputStream->stream->time_base;
 				outputStream->encoder->framerate = outputStream->stream->time_base;
 

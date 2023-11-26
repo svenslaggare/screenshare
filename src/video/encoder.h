@@ -27,13 +27,20 @@ namespace screenshare::video {
 		AVStream* stream = nullptr;
 		std::unique_ptr<AVCodecContext, AVCodecContextDeleter> encoder;
 
-		//pts of the next frame that will be generated
 		std::int64_t nextPts = 0;
 
 		std::unique_ptr<AVFrame, AVFrameDeleter> frame;
 		std::unique_ptr<AVPacket, AVPacketDeleter> packet;
 
 		OutputStream(AVCodec* codec, AVStream* stream);
+
+		static std::optional<OutputStream> create(AVFormatContext* outputFormatContext, AVCodecID codecId);
+	};
+
+	struct VideoEncoderConfig {
+		int width = 0;
+		int height = 0;
+		int frameRate = 0;
 	};
 
 	class VideoEncoder {
@@ -46,13 +53,11 @@ namespace screenshare::video {
 		AVFormatContext* outputFormatContext();
 		const std::vector<OutputStream>& streams() const;
 
-		OutputStream* addVideoStream(int width, int height, int frameRate, AVDictionary* options = nullptr);
+		OutputStream* addVideoStream(const VideoEncoderConfig& config, AVDictionary* options = nullptr);
 	};
-
-	std::optional<OutputStream> createOutputStream(AVFormatContext* outputFormatContext, AVCodecID codecId);
 
 	std::optional<OutputStream> createVideoStream(
 		AVFormatContext* outputFormatContext, AVCodecID codecId,
-		int width, int height, int frameRate, AVDictionary* options
+		const VideoEncoderConfig& config, AVDictionary* options
 	);
 }

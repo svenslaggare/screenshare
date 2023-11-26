@@ -4,6 +4,7 @@
 #include "../screeninteractor//common.h"
 #include "../client/actions.h"
 #include "../misc/concurrency.hpp"
+#include "../video/encoder.h"
 
 namespace screenshare::video {
 	class OutputStream;
@@ -19,18 +20,12 @@ namespace screenshare::screeninteractor {
 }
 
 namespace screenshare::server {
-	struct VideoStreamingConfig {
-		int width = 0;
-		int height = 0;
-		int frameRate = 0;
-	};
-
 	class VideoServer {
 	private:
 		using Socket = boost::asio::ip::tcp::socket;
 		using ClientId = std::uint64_t;
 
-		VideoStreamingConfig mStreamingConfig;
+		video::VideoEncoderConfig mVideoEncoderConfig;
 
 		std::atomic<bool> mRun;
 		boost::asio::io_context mIOContext;
@@ -60,7 +55,7 @@ namespace screenshare::server {
 			std::shared_ptr<client::ClientAction> clientAction
 		);
 	public:
-		explicit VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig streamingConfig);
+		explicit VideoServer(boost::asio::ip::tcp::endpoint bind, video::VideoEncoderConfig videoEncoderConfig);
 
 		void run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor);
 		void stop();

@@ -6,8 +6,8 @@
 #include "../misc/rate_sleeper.h"
 
 namespace screenshare::server {
-	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind, VideoStreamingConfig streamingConfig)
-		: mStreamingConfig(streamingConfig),
+	VideoServer::VideoServer(boost::asio::ip::tcp::endpoint bind, video::VideoEncoderConfig videoEncoderConfig)
+		: mVideoEncoderConfig(videoEncoderConfig),
 		  mAcceptor(mIOContext, bind),
 		  mClientSockets({}),
 		  mClientActions({}) {
@@ -16,7 +16,7 @@ namespace screenshare::server {
 
 	void VideoServer::run(std::unique_ptr<screeninteractor::ScreenInteractor> screenInteractor) {
 		video::VideoEncoder videoEncoder("mp4");
-		auto videoStream = videoEncoder.addVideoStream(mStreamingConfig.width, mStreamingConfig.height, mStreamingConfig.frameRate);
+		auto videoStream = videoEncoder.addVideoStream(mVideoEncoderConfig);
 		if (!videoStream) {
 			return;
 		}

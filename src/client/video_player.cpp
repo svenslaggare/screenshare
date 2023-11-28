@@ -1,5 +1,6 @@
 #include "video_player.h"
 #include "actions.h"
+#include "../misc/bit_rate_measurement.h"
 
 #include <gtkmm/cssprovider.h>
 
@@ -109,6 +110,7 @@ namespace screenshare::client {
 		));
 
 		video::PacketDecoder packetDecoder;
+        misc::BitRateMeasurement bitRateMeasurement;
 		while (!stopToken.stop_requested()) {
 			video::network::PacketHeader packetHeader;
 			if (auto error = packetReceiver.receive(socket, packet.get(), packetHeader)) {
@@ -119,6 +121,8 @@ namespace screenshare::client {
 					throw boost::system::system_error(error);
 				}
 			}
+
+            bitRateMeasurement.add(packet->size * 8);
 
 			if (!mPixBuf) {
 				mPixBuf = Gdk::Pixbuf::create(
@@ -142,7 +146,11 @@ namespace screenshare::client {
 					mFrameInfoTextBuffer.addLines({
 						fmt::format("PTS: {} (delay: {})", frame->pts, packetHeader.encoderPts - frame->pts),
 						fmt::format("Frame number: {}", frame->coded_picture_number),
-						fmt::format("Time since packet sent {:.2f} ms", misc::elapsedSeconds(currentTime, packetHeader.sendTime) * 1000.0)
+						fmt::format(
+                            "Time since packet sent {:.2f} ms, current bit rate: {:.2f} Mbits/s",
+                            misc::elapsedSeconds(currentTime, packetHeader.sendTime) * 1000.0,
+                            (bitRateMeasurement.bitRate()) / (1.0E6)
+                        )
 					});
 				}
 			);

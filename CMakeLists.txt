@@ -13,7 +13,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(src)
 
-add_executable(screenshare ${SOURCES} src/main.cpp)
+add_executable(screenshare ${SOURCES} src/main.cpp
+        src/misc/bit_rate_measurement.cpp
+        src/misc/bit_rate_measurement.h
+)
 
 ##############################################################################################################
 # Dependencies

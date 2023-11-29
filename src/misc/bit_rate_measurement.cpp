@@ -6,7 +6,7 @@ namespace screenshare::misc {
         auto timeNow = std::chrono::high_resolution_clock::now();
         double elapsed = (double)std::chrono::duration_cast<std::chrono::microseconds>(timeNow - mLastMeasurement).count() / 1.0E6;
         if (elapsed >= 1.0) {
-            mBitRate = (double )mTotalBits / elapsed;
+            mBitRate = (double)mTotalBits / elapsed;
             mLastMeasurement = timeNow;
             mTotalBits = 0;
         }

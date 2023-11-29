@@ -149,7 +149,7 @@ namespace screenshare::video {
 
 				outputStream->encoder->pix_fmt = AV_PIX_FMT_YUV420P;
 
-				outputStream->encoder->gop_size = 15;
+				outputStream->encoder->gop_size = 30;
 //				outputStream->encoder->max_b_frames = 1;
 				handleAVResult(av_opt_set(outputStream->encoder->priv_data, "preset", "ultrafast", 0), "Failed to set preset");
 				handleAVResult(av_opt_set(outputStream->encoder->priv_data, "tune", "zerolatency", 0), "Failed to set tune");

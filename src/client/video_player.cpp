@@ -149,7 +149,7 @@ namespace screenshare::client {
 						fmt::format(
                             "Time since packet sent {:.2f} ms, current bit rate: {:.2f} Mbits/s",
                             misc::elapsedSeconds(currentTime, packetHeader.sendTime) * 1000.0,
-                            (bitRateMeasurement.bitRate()) / (1.0E6)
+                            (bitRateMeasurement.averageBitRate()) / (1.0E6)
                         )
 					});
 				}
@@ -202,6 +202,14 @@ namespace screenshare::client {
 		if (auto buffer = mFrameInfoTextBuffer.gtkBufferIfUnchanged()) {
 			mFrameInfoTextView.set_buffer(buffer);
 		}
+
+        if (mIsConnected.load()) {
+            mConnectButton.set_sensitive(false);
+            mDisconnectButton.set_sensitive(true);
+        } else {
+            mConnectButton.set_sensitive(true);
+            mDisconnectButton.set_sensitive(false);
+        }
 
 		return true;
 	}
